@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useLoadProfile } from "@/hooks/useProfile";
 import { colors, layout } from "@/theme";
 
 // Oversized tab bar: tall bar + large icons + always-visible labels so each
 // destination is an easy gloved target while riding.
 export default function TabsLayout() {
+  useLoadProfile();
   return (
     <Tabs
       screenOptions={{
@@ -53,6 +55,13 @@ export default function TabsLayout() {
         options={{
           title: "Group",
           tabBarIcon: ({ color }) => <Ionicons name="people" size={32} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "You",
+          tabBarIcon: ({ color }) => <Ionicons name="person-circle" size={32} color={color} />,
         }}
       />
     </Tabs>

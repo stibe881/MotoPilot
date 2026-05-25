@@ -9,11 +9,15 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { geocode, type GeocodeResult } from "@/lib/routing";
+import { deleteSavedRoute, listSavedRoutes } from "@/lib/routes";
+import { formatDistance } from "@/lib/format";
+import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
 import { colors, layout } from "@/theme";
-import type { RoutePreference } from "@/types/models";
+import type { RoutePreference, SavedRoute } from "@/types/models";
 
 const PREFERENCES: { key: RoutePreference; label: string }[] = [
   { key: "curvy", label: "Curvy" },
@@ -35,13 +39,39 @@ export function DestinationSearch() {
   const preference = useRideStore((s) => s.preference);
   const setPreference = useRideStore((s) => s.setPreference);
   const navigateTo = useRideStore((s) => s.navigateTo);
+  const loadSavedRoute = useRideStore((s) => s.loadSavedRoute);
+  const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saved, setSaved] = useState<SavedRoute[]>([]);
 
   if (isNavigating || routing) return null;
+
+  const toggleSaved = async () => {
+    const next = !showSaved;
+    setShowSaved(next);
+    if (next) {
+      setError(null);
+      try {
+        setSaved(await listSavedRoutes());
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not load saved routes");
+      }
+    }
+  };
+
+  const removeSaved = async (id: string) => {
+    setSaved((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteSavedRoute(id);
+    } catch {
+      /* refetch on next open */
+    }
+  };
 
   const runSearch = async () => {
     if (!query.trim()) return;
@@ -87,6 +117,18 @@ export function DestinationSearch() {
             <Text style={styles.searchButtonText}>Go</Text>
           )}
         </Pressable>
+        <Pressable
+          style={[styles.iconButton, showSaved && styles.iconButtonActive]}
+          onPress={toggleSaved}
+          accessibilityRole="button"
+          accessibilityLabel="Saved routes"
+        >
+          <Ionicons
+            name="bookmark"
+            size={26}
+            color={showSaved ? colors.onAccent : colors.textPrimary}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.prefRow}>
@@ -108,7 +150,43 @@ export function DestinationSearch() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {results.length > 0 ? (
+      {showSaved ? (
+        <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
+          {saved.length === 0 ? (
+            <Text style={styles.emptySaved}>No saved routes yet.</Text>
+          ) : (
+            saved.map((r) => (
+              <View key={r.id} style={styles.savedRow}>
+                <Pressable
+                  style={styles.savedMain}
+                  onPress={() => {
+                    setShowSaved(false);
+                    loadSavedRoute(r);
+                  }}
+                >
+                  <Text style={styles.resultText} numberOfLines={1}>
+                    {r.name}
+                  </Text>
+                  {r.distance_meters != null ? (
+                    <Text style={styles.savedMeta}>
+                      {formatDistance(r.distance_meters, units)} · {r.preference}
+                    </Text>
+                  ) : null}
+                </Pressable>
+                <Pressable
+                  style={styles.deleteButton}
+                  onPress={() => removeSaved(r.id)}
+                  accessibilityLabel={`Delete ${r.name}`}
+                >
+                  <Ionicons name="trash" size={22} color={colors.danger} />
+                </Pressable>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      ) : null}
+
+      {!showSaved && results.length > 0 ? (
         <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
           {results.map((r, i) => (
             <Pressable key={`${r.label}-${i}`} style={styles.resultItem} onPress={() => choose(r)}>
@@ -163,6 +241,45 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
     fontSize: layout.font.body,
     fontWeight: layout.fontWeight.heavy,
+  },
+  iconButton: {
+    width: layout.touchTargetMin,
+    minHeight: layout.touchTargetMin,
+    borderRadius: layout.radius.md,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconButtonActive: {
+    backgroundColor: colors.accent,
+  },
+  emptySaved: {
+    color: colors.textSecondary,
+    fontSize: layout.font.body,
+    padding: layout.spacing.md,
+  },
+  savedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  savedMain: {
+    flex: 1,
+    minHeight: layout.touchTargetMin,
+    paddingHorizontal: layout.spacing.md,
+    justifyContent: "center",
+    gap: 2,
+  },
+  savedMeta: {
+    color: colors.textSecondary,
+    fontSize: layout.font.label,
+  },
+  deleteButton: {
+    width: layout.touchTargetMin,
+    minHeight: layout.touchTargetMin,
+    alignItems: "center",
+    justifyContent: "center",
   },
   prefRow: {
     flexDirection: "row",

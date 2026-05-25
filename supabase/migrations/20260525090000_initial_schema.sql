@@ -189,6 +189,27 @@ create trigger saved_routes_set_updated_at
   before update on public.saved_routes
   for each row execute function public.set_updated_at();
 
+-- Derive the PostGIS LineString from the stored GeoJSON so the client only has
+-- to send `geojson` (sending a geometry column over PostgREST is awkward).
+create or replace function public.set_route_geometry()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.geojson is not null then
+    new.geometry := extensions.st_setsrid(
+      extensions.st_geomfromgeojson(new.geojson::text), 4326
+    );
+  end if;
+  return new;
+end;
+$$;
+
+create trigger saved_routes_set_geometry
+  before insert or update of geojson on public.saved_routes
+  for each row execute function public.set_route_geometry();
+
 -- =============================================================================
 -- connected_services
 -- OAuth tokens for media/fitness providers. Highly sensitive: owner-only RLS,

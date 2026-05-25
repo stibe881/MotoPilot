@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getRoute, type ComputedRoute } from "@/lib/routing";
-import type { LatLng, RoutePreference, Waypoint } from "@/types/models";
+import type { LatLng, RoutePreference, SavedRoute, Waypoint } from "@/types/models";
 
 export interface LiveRider {
   userId: string;
@@ -26,6 +26,7 @@ interface RideState {
   setPreference: (p: RoutePreference) => void;
   navigateTo: (from: LatLng, destination: Waypoint) => Promise<void>;
   recalculate: (from: LatLng) => Promise<void>;
+  loadSavedRoute: (saved: SavedRoute) => void;
   setStepIndex: (i: number) => void;
   stopNavigation: () => void;
 
@@ -73,6 +74,30 @@ export const useRideStore = create<RideState>((set, get) => ({
         routeError: e instanceof Error ? e.message : "Could not recompute route",
       });
     }
+  },
+
+  loadSavedRoute: (saved) => {
+    const coordinates = saved.geojson.coordinates.map(([lon, lat]) => ({
+      latitude: lat,
+      longitude: lon,
+    }));
+    const last = coordinates[coordinates.length - 1];
+    const dest = saved.waypoints?.[saved.waypoints.length - 1];
+    set({
+      preference: saved.preference,
+      destination: dest ?? (last ? { ...last, label: saved.name } : null),
+      route: {
+        coordinates,
+        geojson: saved.geojson,
+        distanceMeters: saved.distance_meters ?? 0,
+        durationSecs: saved.duration_secs ?? 0,
+        steps: [], // saved routes don't retain per-step instructions
+      },
+      isNavigating: true,
+      stepIndex: 0,
+      routing: false,
+      routeError: null,
+    });
   },
 
   setStepIndex: (stepIndex) => set({ stepIndex }),

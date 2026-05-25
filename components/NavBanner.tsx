@@ -1,7 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BigButton } from "@/components/ui/BigButton";
 import { formatDistance, formatDuration, formatEta } from "@/lib/format";
+import { saveRoute } from "@/lib/routes";
+import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
 import { colors, layout } from "@/theme";
 
@@ -11,14 +15,32 @@ import { colors, layout } from "@/theme";
 export function NavBanner() {
   const insets = useSafeAreaInsets();
   const route = useRideStore((s) => s.route);
+  const destination = useRideStore((s) => s.destination);
+  const preference = useRideStore((s) => s.preference);
   const isNavigating = useRideStore((s) => s.isNavigating);
   const stepIndex = useRideStore((s) => s.stepIndex);
   const routing = useRideStore((s) => s.routing);
   const stop = useRideStore((s) => s.stopNavigation);
+  const units = useProfileStore((s) => s.profile?.units ?? "metric");
+
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   if (!isNavigating && !routing) return null;
 
   const step = route?.steps[stepIndex];
+
+  const onSave = async () => {
+    if (!route || saveState !== "idle") return;
+    setSaveState("saving");
+    const name =
+      destination?.label ?? `Route ${new Date().toLocaleDateString()}`;
+    try {
+      await saveRoute(name, route, preference, destination);
+      setSaveState("saved");
+    } catch {
+      setSaveState("idle");
+    }
+  };
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + layout.spacing.sm }]}>
@@ -32,7 +54,7 @@ export function NavBanner() {
             </Text>
             {step ? (
               <Text style={styles.stepDistance}>
-                {formatDistance(step.distanceMeters)}
+                {formatDistance(step.distanceMeters, units)}
               </Text>
             ) : null}
           </View>
@@ -41,11 +63,28 @@ export function NavBanner() {
 
         {route ? (
           <View style={styles.summary}>
-            <Text style={styles.summaryText}>{formatDistance(route.distanceMeters)}</Text>
+            <Text style={styles.summaryText}>{formatDistance(route.distanceMeters, units)}</Text>
             <Text style={styles.summaryDot}>•</Text>
             <Text style={styles.summaryText}>{formatDuration(route.durationSecs)}</Text>
             <Text style={styles.summaryDot}>•</Text>
             <Text style={styles.summaryText}>ETA {formatEta(route.durationSecs)}</Text>
+            <View style={styles.flexSpacer} />
+            <Pressable
+              style={styles.saveButton}
+              onPress={onSave}
+              disabled={saveState !== "idle"}
+              accessibilityRole="button"
+              accessibilityLabel="Save route"
+            >
+              <Ionicons
+                name={saveState === "saved" ? "bookmark" : "bookmark-outline"}
+                size={20}
+                color={saveState === "saved" ? colors.success : colors.textPrimary}
+              />
+              <Text style={styles.saveText}>
+                {saveState === "saved" ? "Saved" : saveState === "saving" ? "…" : "Save"}
+              </Text>
+            </Pressable>
           </View>
         ) : null}
       </View>
@@ -101,4 +140,20 @@ const styles = StyleSheet.create({
   summaryDot: {
     color: colors.textDisabled,
   },
+  flexSpacer: {
+    flex: 1,
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: layout.spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: layout.spacing.sm,
+  },
+  saveText: {
+    color: colors.textPrimary,
+    fontSize: layout.font.label,
+    fontWeight: layout.fontWeight.bold,
+  },
 });
+
