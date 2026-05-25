@@ -73,17 +73,11 @@
         }
       ],
       [
-        "@config-plugins/react-native-ble-plx",
+        "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
           "modes": ["central"],
           "bluetoothAlwaysPermission": "MotoPilot connects to your Cardo/intercom headset to read battery level and manage audio routing."
-        }
-      ],
-      [
-        "expo-music-kit",
-        {
-          "musicUsageDescription": "MotoPilot controls Apple Music playback inside the dashboard so you don't have to switch apps while riding."
         }
       ],
       "./plugins/withCallKeep",
