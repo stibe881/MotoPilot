@@ -38,7 +38,6 @@
         "NSAppleMusicUsageDescription": "MotoPilot controls Apple Music playback inside the dashboard so you don't have to switch apps while riding.",
         "NSMicrophoneUsageDescription": "MotoPilot needs microphone access to handle in-app calls through your connected headset.",
         "NSContactsUsageDescription": "MotoPilot reads contacts to display caller names on the high-contrast call overlay.",
-        "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["spotify"]
       },
       "entitlements": {
