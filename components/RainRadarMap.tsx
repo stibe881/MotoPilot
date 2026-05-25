@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, {
+  Marker,
+  Polyline,
   PROVIDER_DEFAULT,
   UrlTile,
   type Region,
@@ -9,6 +11,8 @@ import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, layout } from "@/theme";
 import { BigButton } from "@/components/ui/BigButton";
+import { NavBanner } from "@/components/NavBanner";
+import { useRideStore } from "@/store/useRideStore";
 
 // --- RainViewer public API ---------------------------------------------------
 // https://www.rainviewer.com/api/weather-maps-api.html
@@ -51,6 +55,21 @@ export function RainRadarMap() {
   const [radarVisible, setRadarVisible] = useState(true);
   const [playing, setPlaying] = useState(true);
   const [loadingRadar, setLoadingRadar] = useState(true);
+
+  const route = useRideStore((s) => s.route);
+  const destination = useRideStore((s) => s.destination);
+  const isNavigating = useRideStore((s) => s.isNavigating);
+  const liveRiders = useRideStore((s) => s.liveRiders);
+
+  // Fit the map to the route once it's computed.
+  useEffect(() => {
+    if (route && route.coordinates.length > 1) {
+      mapRef.current?.fitToCoordinates(route.coordinates, {
+        edgePadding: { top: 140, right: 60, bottom: 200, left: 60 },
+        animated: true,
+      });
+    }
+  }, [route]);
 
   // Center on the rider once location permission is granted.
   useEffect(() => {
@@ -149,9 +168,45 @@ export function RainRadarMap() {
             maximumZ={12}
           />
         ) : null}
+
+        {route ? (
+          <Polyline
+            coordinates={route.coordinates}
+            strokeColor={colors.info}
+            strokeWidth={7}
+            zIndex={2}
+          />
+        ) : null}
+
+        {destination ? (
+          <Marker
+            coordinate={destination}
+            title={destination.label ?? "Destination"}
+            pinColor={colors.accent}
+          />
+        ) : null}
+
+        {Object.values(liveRiders)
+          .filter((r) => !r.isSelf)
+          .map((rider) => (
+            <Marker
+              key={rider.userId}
+              coordinate={rider.position}
+              title={rider.displayName}
+              description={
+                rider.batteryPct != null ? `Headset ${rider.batteryPct}%` : undefined
+              }
+              pinColor={colors.success}
+              rotation={rider.heading ?? 0}
+              flat
+            />
+          ))}
       </MapView>
 
-      {/* Timestamp pill */}
+      <NavBanner />
+
+      {/* Timestamp pill — hidden while the turn-by-turn banner is up. */}
+      {!isNavigating ? (
       <View
         style={[styles.timestampPill, { top: insets.top + layout.spacing.sm }]}
         pointerEvents="none"
@@ -170,6 +225,7 @@ export function RainRadarMap() {
           </>
         )}
       </View>
+      ) : null}
 
       {/* Radar controls — bottom-right, glove-sized */}
       <View style={styles.controls}>

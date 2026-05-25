@@ -1,0 +1,97 @@
+import { create } from "zustand";
+import { getRoute, type ComputedRoute } from "@/lib/routing";
+import type { LatLng, RoutePreference, Waypoint } from "@/types/models";
+
+export interface LiveRider {
+  userId: string;
+  displayName: string;
+  position: LatLng;
+  heading: number | null;
+  batteryPct: number | null;
+  isSelf: boolean;
+}
+
+interface RideState {
+  preference: RoutePreference;
+  destination: Waypoint | null;
+  route: ComputedRoute | null;
+  isNavigating: boolean;
+  stepIndex: number;
+  routing: boolean;
+  routeError: string | null;
+
+  // Live group riders, keyed by userId, for map markers.
+  liveRiders: Record<string, LiveRider>;
+
+  setPreference: (p: RoutePreference) => void;
+  navigateTo: (from: LatLng, destination: Waypoint) => Promise<void>;
+  recalculate: (from: LatLng) => Promise<void>;
+  setStepIndex: (i: number) => void;
+  stopNavigation: () => void;
+
+  upsertRider: (rider: LiveRider) => void;
+  removeRider: (userId: string) => void;
+  setRiders: (riders: LiveRider[]) => void;
+  clearRiders: () => void;
+}
+
+export const useRideStore = create<RideState>((set, get) => ({
+  preference: "curvy",
+  destination: null,
+  route: null,
+  isNavigating: false,
+  stepIndex: 0,
+  routing: false,
+  routeError: null,
+  liveRiders: {},
+
+  setPreference: (preference) => set({ preference }),
+
+  navigateTo: async (from, destination) => {
+    set({ routing: true, routeError: null, destination });
+    try {
+      const route = await getRoute([from, destination], get().preference);
+      set({ route, isNavigating: true, stepIndex: 0, routing: false });
+    } catch (e) {
+      set({
+        routing: false,
+        routeError: e instanceof Error ? e.message : "Could not compute route",
+      });
+    }
+  },
+
+  recalculate: async (from) => {
+    const { destination, preference } = get();
+    if (!destination) return;
+    set({ routing: true, routeError: null });
+    try {
+      const route = await getRoute([from, destination], preference);
+      set({ route, stepIndex: 0, routing: false });
+    } catch (e) {
+      set({
+        routing: false,
+        routeError: e instanceof Error ? e.message : "Could not recompute route",
+      });
+    }
+  },
+
+  setStepIndex: (stepIndex) => set({ stepIndex }),
+
+  stopNavigation: () =>
+    set({ isNavigating: false, route: null, destination: null, stepIndex: 0, routeError: null }),
+
+  upsertRider: (rider) =>
+    set((s) => ({ liveRiders: { ...s.liveRiders, [rider.userId]: rider } })),
+
+  removeRider: (userId) =>
+    set((s) => {
+      const next = { ...s.liveRiders };
+      delete next[userId];
+      return { liveRiders: next };
+    }),
+
+  setRiders: (riders) =>
+    set({ liveRiders: Object.fromEntries(riders.map((r) => [r.userId, r])) }),
+
+  clearRiders: () => set({ liveRiders: {} }),
+}));

@@ -1,14 +1,19 @@
 import { View, StyleSheet } from "react-native";
+import { DestinationSearch } from "@/components/DestinationSearch";
 import { RainRadarMap } from "@/components/RainRadarMap";
+import { useNavigationTracker } from "@/hooks/useNavigationTracker";
 import { colors } from "@/theme";
 
-// Navigation dashboard — the "single pane of glass". The map fills the screen
-// edge to edge; route polylines and turn-by-turn overlays will mount on top of
-// the RainRadarMap in a later step.
+// Navigation dashboard — the "single pane of glass". The map fills the screen;
+// the destination search overlays the top when idle, the turn-by-turn banner
+// (rendered inside RainRadarMap) takes over while navigating.
 export default function DashboardScreen() {
+  useNavigationTracker();
+
   return (
     <View style={styles.container}>
       <RainRadarMap />
+      <DestinationSearch />
     </View>
   );
 }

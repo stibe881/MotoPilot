@@ -217,11 +217,19 @@ create trigger connected_services_set_updated_at
 -- rider_locations
 -- Live position pings for group rides. Realtime-enabled (see publication below).
 -- One latest row per (group, user) — upsert on the unique key.
+--
+-- lat/lon are the source of truth so realtime payloads are plain numbers
+-- (a geometry column would arrive as EWKB hex). `position` is a generated
+-- geometry column kept in sync for spatial queries / GIST indexing.
 -- =============================================================================
 create table public.rider_locations (
   group_id       uuid not null references public.rider_groups (id) on delete cascade,
   user_id        uuid not null references auth.users (id) on delete cascade,
-  position       extensions.geometry(Point, 4326) not null,
+  lat            double precision not null,
+  lon            double precision not null,
+  position       extensions.geometry(Point, 4326)
+                   generated always as
+                   (extensions.st_setsrid(extensions.st_makepoint(lon, lat), 4326)) stored,
   heading        double precision,        -- degrees, 0-360
   speed_mps      double precision,        -- meters/second
   battery_pct    int,                     -- headset / device battery
@@ -360,6 +368,39 @@ create policy "users can clear their own location"
   on public.rider_locations for delete
   to authenticated
   using (user_id = auth.uid());
+
+-- =============================================================================
+-- RPC: join a group by its share code
+-- A non-member can't SELECT the group (RLS), so joining by code must run in a
+-- SECURITY DEFINER function that adds the caller as a member.
+-- =============================================================================
+create or replace function public.join_group_by_code(p_code text)
+returns public.rider_groups
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  g public.rider_groups;
+begin
+  select * into g
+  from public.rider_groups
+  where join_code = upper(p_code) and is_active
+  limit 1;
+
+  if g.id is null then
+    raise exception 'No active group found for that code' using errcode = 'no_data_found';
+  end if;
+
+  insert into public.rider_group_members (group_id, user_id, role)
+  values (g.id, auth.uid(), 'member')
+  on conflict (group_id, user_id) do nothing;
+
+  return g;
+end;
+$$;
+
+grant execute on function public.join_group_by_code(text) to authenticated;
 
 -- =============================================================================
 -- Realtime
