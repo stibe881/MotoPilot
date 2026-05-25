@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CallOverlay } from "@/components/CallOverlay";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { initI18n } from "@/lib/i18n";
 import { colors } from "@/theme";
 
 const navTheme = {
@@ -62,6 +63,10 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    initI18n();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>

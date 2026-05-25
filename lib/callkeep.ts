@@ -1,6 +1,15 @@
 import { Platform } from "react-native";
-import RNCallKeep from "react-native-callkeep";
 import { useCallStore } from "@/store/useCallStore";
+
+// react-native-callkeep requires native modules (CallKit/ConnectionService) that
+// are not available in Expo Go. We load it lazily with a no-op fallback so the
+// app can run in Expo Go during development.
+let RNCallKeep: any = null;
+try {
+  RNCallKeep = require("react-native-callkeep").default;
+} catch {
+  // Native module not available (e.g. Expo Go) – use no-ops below
+}
 
 // react-native-callkeep bridges to iOS CallKit. NOTE: CallKit is for VoIP /
 // app-handled calls — iOS does not let a third-party app replace the system UI

@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useLoadProfile } from "@/hooks/useProfile";
 import { colors, layout } from "@/theme";
 
 // Oversized tab bar: tall bar + large icons + always-visible labels so each
 // destination is an easy gloved target while riding.
 export default function TabsLayout() {
+  const { t } = useTranslation();
   useLoadProfile();
   return (
     <Tabs
@@ -32,35 +34,35 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Navigate",
+          title: t("tabs.navigate"),
           tabBarIcon: ({ color }) => <Ionicons name="navigate" size={32} color={color} />,
         }}
       />
       <Tabs.Screen
         name="media"
         options={{
-          title: "Media",
+          title: t("tabs.media"),
           tabBarIcon: ({ color }) => <Ionicons name="musical-notes" size={32} color={color} />,
         }}
       />
       <Tabs.Screen
         name="intercom"
         options={{
-          title: "Intercom",
+          title: t("tabs.intercom"),
           tabBarIcon: ({ color }) => <Ionicons name="bluetooth" size={32} color={color} />,
         }}
       />
       <Tabs.Screen
         name="groups"
         options={{
-          title: "Group",
+          title: t("tabs.group"),
           tabBarIcon: ({ color }) => <Ionicons name="people" size={32} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "You",
+          title: t("tabs.you"),
           tabBarIcon: ({ color }) => <Ionicons name="person-circle" size={32} color={color} />,
         }}
       />

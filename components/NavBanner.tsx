@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,6 +14,7 @@ import { colors, layout } from "@/theme";
 // to live GPS is driven by the navigation hook (useNavigationTracker), which
 // advances stepIndex; this is the presentation layer.
 export function NavBanner() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const route = useRideStore((s) => s.route);
   const destination = useRideStore((s) => s.destination);
@@ -33,7 +35,7 @@ export function NavBanner() {
     if (!route || saveState !== "idle") return;
     setSaveState("saving");
     const name =
-      destination?.label ?? `Route ${new Date().toLocaleDateString()}`;
+      destination?.label ?? t("nav.routeName", { date: new Date().toLocaleDateString() });
     try {
       await saveRoute(name, route, preference, destination);
       setSaveState("saved");
@@ -49,8 +51,8 @@ export function NavBanner() {
           <View style={styles.instructionBox}>
             <Text style={styles.instruction} numberOfLines={2}>
               {routing
-                ? "Calculating route…"
-                : step?.instruction ?? "Head to your destination"}
+                ? t("nav.calculating")
+                : step?.instruction ?? t("nav.head")}
             </Text>
             {step ? (
               <Text style={styles.stepDistance}>
@@ -67,14 +69,14 @@ export function NavBanner() {
             <Text style={styles.summaryDot}>•</Text>
             <Text style={styles.summaryText}>{formatDuration(route.durationSecs)}</Text>
             <Text style={styles.summaryDot}>•</Text>
-            <Text style={styles.summaryText}>ETA {formatEta(route.durationSecs)}</Text>
+            <Text style={styles.summaryText}>{t("nav.eta")} {formatEta(route.durationSecs)}</Text>
             <View style={styles.flexSpacer} />
             <Pressable
               style={styles.saveButton}
               onPress={onSave}
               disabled={saveState !== "idle"}
               accessibilityRole="button"
-              accessibilityLabel="Save route"
+              accessibilityLabel={t("nav.saveRoute")}
             >
               <Ionicons
                 name={saveState === "saved" ? "bookmark" : "bookmark-outline"}
@@ -82,7 +84,7 @@ export function NavBanner() {
                 color={saveState === "saved" ? colors.success : colors.textPrimary}
               />
               <Text style={styles.saveText}>
-                {saveState === "saved" ? "Saved" : saveState === "saving" ? "…" : "Save"}
+                {saveState === "saved" ? t("nav.saved") : saveState === "saving" ? t("nav.saving") : t("nav.save")}
               </Text>
             </Pressable>
           </View>

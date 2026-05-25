@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,6 +34,7 @@ async function currentLatLng() {
 }
 
 export function DestinationSearch() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isNavigating = useRideStore((s) => s.isNavigating);
   const routing = useRideStore((s) => s.routing);
@@ -59,7 +61,7 @@ export function DestinationSearch() {
       try {
         setSaved(await listSavedRoutes());
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not load saved routes");
+        setError(e instanceof Error ? e.message : t("search.loadError"));
       }
     }
   };
@@ -81,7 +83,7 @@ export function DestinationSearch() {
       const near = await currentLatLng().catch(() => undefined);
       setResults(await geocode(query.trim(), near));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
+      setError(e instanceof Error ? e.message : t("search.searchError"));
     } finally {
       setSearching(false);
     }
@@ -94,7 +96,7 @@ export function DestinationSearch() {
       const from = await currentLatLng();
       await navigateTo(from, { latitude: r.latitude, longitude: r.longitude, label: r.label });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start navigation");
+      setError(e instanceof Error ? e.message : t("search.navError"));
     }
   };
 
@@ -103,7 +105,7 @@ export function DestinationSearch() {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.input}
-          placeholder="Where to?"
+          placeholder={t("search.placeholder")}
           placeholderTextColor={colors.textDisabled}
           value={query}
           onChangeText={setQuery}
@@ -114,14 +116,14 @@ export function DestinationSearch() {
           {searching ? (
             <ActivityIndicator color={colors.onAccent} />
           ) : (
-            <Text style={styles.searchButtonText}>Go</Text>
+            <Text style={styles.searchButtonText}>{t("search.go")}</Text>
           )}
         </Pressable>
         <Pressable
           style={[styles.iconButton, showSaved && styles.iconButtonActive]}
           onPress={toggleSaved}
           accessibilityRole="button"
-          accessibilityLabel="Saved routes"
+          accessibilityLabel={t("search.savedRoutes")}
         >
           <Ionicons
             name="bookmark"
@@ -142,7 +144,7 @@ export function DestinationSearch() {
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{p.label}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(`search.${p.key}`)}</Text>
             </Pressable>
           );
         })}
@@ -153,7 +155,7 @@ export function DestinationSearch() {
       {showSaved ? (
         <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
           {saved.length === 0 ? (
-            <Text style={styles.emptySaved}>No saved routes yet.</Text>
+            <Text style={styles.emptySaved}>{t("search.noSaved")}</Text>
           ) : (
             saved.map((r) => (
               <View key={r.id} style={styles.savedRow}>
@@ -176,7 +178,7 @@ export function DestinationSearch() {
                 <Pressable
                   style={styles.deleteButton}
                   onPress={() => removeSaved(r.id)}
-                  accessibilityLabel={`Delete ${r.name}`}
+                  accessibilityLabel={t("search.delete", { name: r.name })}
                 >
                   <Ionicons name="trash" size={22} color={colors.danger} />
                 </Pressable>

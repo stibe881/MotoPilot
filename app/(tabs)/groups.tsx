@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
 import { BigButton } from "@/components/ui/BigButton";
 import { useGroupRide } from "@/hooks/useGroupRide";
@@ -9,6 +10,7 @@ import { colors, layout } from "@/theme";
 import type { RiderGroup } from "@/types/models";
 
 export default function GroupsScreen() {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<RiderGroup[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -23,7 +25,7 @@ export default function GroupsScreen() {
     try {
       setGroups(await listMyGroups());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load groups");
+      setError(e instanceof Error ? e.message : t("groups.failedLoad"));
     }
   }, []);
 
@@ -37,26 +39,26 @@ export default function GroupsScreen() {
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : t("groups.error"));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <ScreenScaffold title="Group Ride" subtitle="Ride together, see everyone live" icon="people">
+    <ScreenScaffold title={t("groups.title")} subtitle={t("groups.subtitle")} icon="people">
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="New group name"
+          placeholder={t("groups.newGroup")}
           placeholderTextColor={colors.textDisabled}
           value={name}
           onChangeText={setName}
         />
         <BigButton
-          label="Create"
+          label={t("groups.create")}
           icon="add-circle"
           loading={busy}
           disabled={!name.trim()}
@@ -73,14 +75,14 @@ export default function GroupsScreen() {
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Join code"
+          placeholder={t("groups.joinCode")}
           placeholderTextColor={colors.textDisabled}
           autoCapitalize="characters"
           value={code}
           onChangeText={setCode}
         />
         <BigButton
-          label="Join"
+          label={t("groups.join")}
           icon="enter"
           variant="neutral"
           loading={busy}
@@ -97,7 +99,7 @@ export default function GroupsScreen() {
 
       {groups.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No groups yet. Create one or join with a code.</Text>
+          <Text style={styles.emptyText}>{t("groups.empty")}</Text>
         </View>
       ) : (
         groups.map((g) => {
@@ -109,11 +111,11 @@ export default function GroupsScreen() {
                 <Text style={styles.joinCode}>{g.join_code}</Text>
               </View>
               {isActive ? (
-                <Text style={styles.liveText}>● Live · {liveCount} rider(s) sharing</Text>
+                <Text style={styles.liveText}>{t("groups.live", { count: liveCount })}</Text>
               ) : null}
               <View style={styles.groupActions}>
                 <BigButton
-                  label={isActive ? "Stop sharing" : "Start ride"}
+                  label={isActive ? t("groups.stopSharing") : t("groups.startRide")}
                   icon={isActive ? "stop-circle" : "navigate"}
                   variant={isActive ? "danger" : "primary"}
                   onPress={() => setActiveId(isActive ? null : g.id)}
@@ -129,7 +131,7 @@ export default function GroupsScreen() {
                     })
                   }
                 >
-                  <Text style={styles.leaveText}>Leave</Text>
+                  <Text style={styles.leaveText}>{t("groups.leave")}</Text>
                 </Pressable>
               </View>
             </View>

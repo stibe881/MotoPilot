@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, {
   Marker,
@@ -45,6 +46,7 @@ function buildTileTemplate(host: string, frame: RainFrame): string {
 }
 
 export function RainRadarMap() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
@@ -55,6 +57,7 @@ export function RainRadarMap() {
   const [radarVisible, setRadarVisible] = useState(true);
   const [playing, setPlaying] = useState(true);
   const [loadingRadar, setLoadingRadar] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
 
   const route = useRideStore((s) => s.route);
   const destination = useRideStore((s) => s.destination);
@@ -151,13 +154,14 @@ export function RainRadarMap() {
         initialRegion={DEFAULT_REGION}
         region={region}
         onRegionChangeComplete={setRegion}
+        onMapReady={() => setMapReady(true)}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
         rotateEnabled
         pitchEnabled
       >
-        {radarVisible && tileTemplate ? (
+        {mapReady && radarVisible && tileTemplate ? (
           <UrlTile
             key={tileTemplate}
             urlTemplate={tileTemplate}
@@ -165,6 +169,7 @@ export function RainRadarMap() {
             zIndex={1}
             opacity={0.7}
             shouldReplaceMapContent={false}
+            minimumZ={2}
             maximumZ={12}
           />
         ) : null}
@@ -181,7 +186,7 @@ export function RainRadarMap() {
         {destination ? (
           <Marker
             coordinate={destination}
-            title={destination.label ?? "Destination"}
+            title={destination.label ?? t("radar.destination")}
             pinColor={colors.accent}
           />
         ) : null}
@@ -194,7 +199,7 @@ export function RainRadarMap() {
               coordinate={rider.position}
               title={rider.displayName}
               description={
-                rider.batteryPct != null ? `Headset ${rider.batteryPct}%` : undefined
+                rider.batteryPct != null ? t("radar.headset", { pct: rider.batteryPct }) : undefined
               }
               pinColor={colors.success}
               rotation={rider.heading ?? 0}
@@ -221,7 +226,7 @@ export function RainRadarMap() {
                 { backgroundColor: radarVisible ? colors.info : colors.textDisabled },
               ]}
             />
-            <Text style={styles.timestampText}>Radar {frameLabel}</Text>
+            <Text style={styles.timestampText}>{t("radar.label", { time: frameLabel })}</Text>
           </>
         )}
       </View>

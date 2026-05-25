@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "me.stibe.motopilot",
@@ -38,7 +40,9 @@
         "NSAppleMusicUsageDescription": "MotoPilot controls Apple Music playback inside the dashboard so you don't have to switch apps while riding.",
         "NSMicrophoneUsageDescription": "MotoPilot needs microphone access to handle in-app calls through your connected headset.",
         "NSContactsUsageDescription": "MotoPilot reads contacts to display caller names on the high-contrast call overlay.",
-        "LSApplicationQueriesSchemes": ["spotify"]
+        "LSApplicationQueriesSchemes": [
+          "spotify"
+        ]
       },
       "entitlements": {
         "aps-environment": "production"
@@ -75,7 +79,9 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": ["central"],
+          "modes": [
+            "central"
+          ],
           "bluetoothAlwaysPermission": "MotoPilot connects to your Cardo/intercom headset to read battery level and manage audio routing."
         }
       ],
@@ -89,7 +95,8 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

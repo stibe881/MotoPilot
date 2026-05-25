@@ -1,4 +1,5 @@
 import { Image, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
 import { BigButton } from "@/components/ui/BigButton";
 import { useMediaPlayer } from "@/hooks/useMediaPlayer";
@@ -7,6 +8,7 @@ import { colors, layout } from "@/theme";
 // Unified media player. Controls delegate to whichever provider is connected
 // (Spotify Web API / Apple Music MusicKit) via useMediaPlayer.
 export default function MediaScreen() {
+  const { t } = useTranslation();
   const {
     nowPlaying,
     isConnected,
@@ -24,24 +26,24 @@ export default function MediaScreen() {
 
   return (
     <ScreenScaffold
-      title="Now Playing"
-      subtitle="Spotify & Apple Music — controlled in-app"
+      title={t("media.title")}
+      subtitle={t("media.subtitle")}
       icon="musical-notes"
     >
       <View style={styles.artwork}>
         {nowPlaying?.artworkUrl ? (
           <Image source={{ uri: nowPlaying.artworkUrl }} style={styles.artworkImage} />
         ) : (
-          <Text style={styles.artworkHint}>Album Art</Text>
+          <Text style={styles.artworkHint}>{t("media.albumArt")}</Text>
         )}
       </View>
 
       <View style={styles.trackInfo}>
         <Text style={styles.track} numberOfLines={1}>
-          {nowPlaying?.title ?? (isConnected ? "Nothing playing" : "Not Connected")}
+          {nowPlaying?.title ?? (isConnected ? t("media.nothingPlaying") : t("media.notConnected"))}
         </Text>
         <Text style={styles.artist} numberOfLines={1}>
-          {nowPlaying?.artist ?? "Link a music service to start playback"}
+          {nowPlaying?.artist ?? t("media.linkService")}
         </Text>
       </View>
 
@@ -59,12 +61,12 @@ export default function MediaScreen() {
 
       <View style={styles.providers}>
         {isConnected ? (
-          <BigButton label="Disconnect" icon="close-circle" variant="neutral" onPress={disconnect} />
+          <BigButton label={t("media.disconnect")} icon="close-circle" variant="neutral" onPress={disconnect} />
         ) : (
           <>
-            <BigButton label="Connect Spotify" icon="link" variant="neutral" onPress={connectSpotify} />
+            <BigButton label={t("media.connectSpotify")} icon="link" variant="neutral" onPress={connectSpotify} />
             <BigButton
-              label="Connect Apple Music"
+              label={t("media.connectApple")}
               icon="musical-note"
               variant="neutral"
               onPress={connectAppleMusic}
@@ -74,7 +76,7 @@ export default function MediaScreen() {
       </View>
 
       {!hasTrack && isConnected ? (
-        <Text style={styles.hint}>Start playback in the app, then control it here.</Text>
+        <Text style={styles.hint}>{t("media.hint")}</Text>
       ) : null}
     </ScreenScaffold>
   );

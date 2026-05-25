@@ -1,15 +1,11 @@
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { BigButton } from "@/components/ui/BigButton";
 import { answerCall, endCall, setupCallKeep } from "@/lib/callkeep";
 import { useCallStore } from "@/store/useCallStore";
 import { colors, layout } from "@/theme";
 
-const STATE_LABEL: Record<string, string> = {
-  incoming: "Incoming call",
-  outgoing: "Calling…",
-  active: "On call",
-};
 
 /**
  * Full-screen, high-contrast call overlay. Mounted once at the root; renders
@@ -17,6 +13,7 @@ const STATE_LABEL: Record<string, string> = {
  * targets so a call can be handled with a gloved hand without app-switching.
  */
 export function CallOverlay() {
+  const { t } = useTranslation();
   const call = useCallStore((s) => s.call);
 
   useEffect(() => {
@@ -30,7 +27,9 @@ export function CallOverlay() {
   return (
     <View style={styles.overlay}>
       <View style={styles.body}>
-        <Text style={styles.state}>{STATE_LABEL[call.state] ?? "Call"}</Text>
+        <Text style={styles.state}>
+          {call.state === "incoming" ? t("call.incoming") : call.state === "outgoing" ? t("call.outgoing") : call.state === "active" ? t("call.active") : t("call.label")}
+        </Text>
         <Text style={styles.name} numberOfLines={1}>
           {call.callerName || call.handle}
         </Text>
@@ -45,14 +44,14 @@ export function CallOverlay() {
         {isIncoming ? (
           <>
             <BigButton
-              label="Decline"
+              label={t("call.decline")}
               icon="call"
               variant="danger"
               style={styles.action}
               onPress={() => endCall(call.uuid)}
             />
             <BigButton
-              label="Answer"
+              label={t("call.answer")}
               icon="call"
               variant="success"
               style={styles.action}
@@ -61,7 +60,7 @@ export function CallOverlay() {
           </>
         ) : (
           <BigButton
-            label="End call"
+            label={t("call.end")}
             icon="call"
             variant="danger"
             style={styles.action}

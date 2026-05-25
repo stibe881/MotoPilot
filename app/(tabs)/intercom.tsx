@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
 import { BigButton } from "@/components/ui/BigButton";
 import { useIntercom } from "@/hooks/useIntercom";
@@ -13,6 +14,7 @@ function batteryColor(pct: number | null): string {
 }
 
 export default function IntercomScreen() {
+  const { t } = useTranslation();
   const {
     scanning,
     devices,
@@ -29,33 +31,33 @@ export default function IntercomScreen() {
   const connected = connectedId !== null;
 
   return (
-    <ScreenScaffold title="Intercom" subtitle="Cardo / Bluetooth headset" icon="bluetooth">
+    <ScreenScaffold title={t("intercom.title")} subtitle={t("intercom.subtitle")} icon="bluetooth">
       <View style={styles.statusCard}>
         <View style={styles.statusRow}>
-          <Text style={styles.statusLabel}>Headset</Text>
+          <Text style={styles.statusLabel}>{t("intercom.headset")}</Text>
           <Text style={[styles.statusValue, { color: connected ? colors.success : colors.textDisabled }]}>
-            {connected ? deviceName ?? "Connected" : "Not connected"}
+            {connected ? deviceName ?? t("intercom.connected") : t("intercom.notConnected")}
           </Text>
         </View>
         <View style={styles.statusRow}>
-          <Text style={styles.statusLabel}>Battery</Text>
+          <Text style={styles.statusLabel}>{t("intercom.battery")}</Text>
           <Text style={[styles.statusValue, { color: batteryColor(battery) }]}>
             {battery != null ? `${battery}%` : "—"}
           </Text>
         </View>
         <View style={styles.statusRow}>
-          <Text style={styles.statusLabel}>Audio route</Text>
-          <Text style={styles.statusValue}>{connected ? "Headset (auto)" : "—"}</Text>
+          <Text style={styles.statusLabel}>{t("intercom.audioRoute")}</Text>
+          <Text style={styles.statusValue}>{connected ? t("intercom.headsetAuto") : "—"}</Text>
         </View>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {connected ? (
-        <BigButton label="Disconnect" icon="close-circle" variant="danger" onPress={disconnect} />
+        <BigButton label={t("intercom.disconnect")} icon="close-circle" variant="danger" onPress={disconnect} />
       ) : (
         <BigButton
-          label={scanning ? "Scanning…" : "Scan for devices"}
+          label={scanning ? t("intercom.scanning") : t("intercom.scan")}
           icon="search"
           variant="primary"
           loading={scanning || connecting}
@@ -70,7 +72,7 @@ export default function IntercomScreen() {
             <Text style={styles.deviceName} numberOfLines={1}>
               {d.name}
             </Text>
-            {d.rssi != null ? <Text style={styles.rssi}>{d.rssi} dBm</Text> : null}
+            {d.rssi != null ? <Text style={styles.rssi}>{t("intercom.dbm", { rssi: d.rssi })}</Text> : null}
           </Pressable>
         ))}
     </ScreenScaffold>
