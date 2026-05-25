@@ -136,6 +136,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: layout.spacing.sm,
   },
+  error: {
+    color: colors.danger,
+    fontSize: layout.font.label,
+    fontWeight: layout.fontWeight.bold,
+  },
   input: {
     flex: 1,
     minHeight: layout.touchTargetMin,

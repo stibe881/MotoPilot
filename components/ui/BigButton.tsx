@@ -57,7 +57,7 @@ export function BigButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label ?? icon}
+      accessibilityLabel={label ?? (typeof icon === "string" ? icon : undefined)}
       accessibilityState={{ disabled: disabled || loading }}
       onPress={onPress}
       disabled={disabled || loading}
