@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { Linking } from "react-native";
+import * as Linking from "expo-linking";
 import { appleMusicProvider, requestAppleMusicAuth } from "@/lib/media/appleMusic";
 import { spotifyProvider } from "@/lib/media/spotify";
 import type { MediaProvider } from "@/lib/media/types";
@@ -46,7 +46,8 @@ export function useMediaPlayer() {
   useEffect(() => {
     const handleUrl = async (event: { url: string }) => {
       const url = event.url;
-      if (!url.startsWith("motopilot://redirect")) return;
+      // Support both Expo Go (contains /--/redirect) and standalone (motopilot://redirect)
+      if (!url.includes("/--/redirect") && !url.startsWith("motopilot://redirect")) return;
 
       const hash = url.split("#")[1];
       if (!hash) return;
@@ -110,7 +111,7 @@ export function useMediaPlayer() {
       throw new Error("CLIENT_ID_MISSING");
     }
 
-    const redirectUri = "motopilot://redirect";
+    const redirectUri = Linking.createURL("redirect");
     const scopes = [
       "user-modify-playback-state",
       "user-read-currently-playing",

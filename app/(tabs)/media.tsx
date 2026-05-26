@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import * as Linking from "expo-linking";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
 import { BigButton } from "@/components/ui/BigButton";
 import { useMediaPlayer } from "@/hooks/useMediaPlayer";
@@ -29,6 +30,7 @@ export default function MediaScreen() {
 
   const playing = nowPlaying?.isPlaying ?? false;
   const hasTrack = nowPlaying != null;
+  const redirectUri = Linking.createURL("redirect");
 
   const handleConnectSpotify = async () => {
     try {
@@ -98,8 +100,13 @@ export default function MediaScreen() {
         <View style={styles.setupCard}>
           <Text style={styles.setupTitle}>🔌 Spotify Real Connection Setup</Text>
           <Text style={styles.setupText}>
-            Um echtes Spotify zu steuern, trage <Text style={styles.code}>EXPO_PUBLIC_SPOTIFY_CLIENT_ID</Text> in deine <Text style={styles.code}>.env</Text> ein (für vollen Login) ODER füge hier direkt einen temporären **Spotify Access Token** ein:
+            Um echtes Spotify zu steuern, trage <Text style={styles.code}>EXPO_PUBLIC_SPOTIFY_CLIENT_ID</Text> in deine <Text style={styles.code}>.env</Text> ein (für vollen Login) ODER füge hier direkt einen temporären **Spotify Access Token** ein.
           </Text>
+
+          <Text style={styles.setupText}>
+            Trage diese exakte Redirect-URI im Spotify Developer Dashboard unter "Redirect URIs" ein:
+          </Text>
+          <Text style={styles.redirectUriText} selectable>{redirectUri}</Text>
 
           <TextInput
             style={styles.setupInput}
@@ -221,6 +228,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: layout.font.label,
     lineHeight: 18,
+  },
+  redirectUriText: {
+    color: colors.accent,
+    backgroundColor: "rgba(20, 24, 36, 0.6)",
+    padding: layout.spacing.sm,
+    borderRadius: layout.radius.sm,
+    fontSize: layout.font.label - 1,
+    borderWidth: 1,
+    borderColor: "rgba(255, 94, 0, 0.3)",
+    marginVertical: 4,
+    fontWeight: "bold",
   },
   code: {
     color: colors.accent,
