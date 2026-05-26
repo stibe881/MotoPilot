@@ -60,6 +60,9 @@ export function useMediaPlayer() {
       }
 
       if (code && user?.id) {
+        // Wait 500ms for the network interface to fully settle after foreground app transition
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         try {
           const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
           const clientSecret = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET;
@@ -69,6 +72,11 @@ export function useMediaPlayer() {
             console.error("Spotify Client Credentials missing in .env");
             return;
           }
+
+          console.log("Exchanging Spotify code for token...", {
+            clientId: clientId ? "Present" : "Missing",
+            redirectUri,
+          });
 
           // Exchange authorization code for access & refresh tokens
           // Sending client_id and client_secret directly in the body is officially supported
