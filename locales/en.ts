@@ -70,6 +70,7 @@ const en = {
     model: "Model",
     units: "Units",
     language: "Language",
+    speedTolerance: "Speed tolerance",
     saveError: "Could not save profile",
     saved: "Saved",
     save: "Save profile",

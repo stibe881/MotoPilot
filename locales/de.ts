@@ -70,6 +70,7 @@ const de = {
     model: "Modell",
     units: "Einheiten",
     language: "Sprache",
+    speedTolerance: "Tempo-Toleranz",
     saveError: "Profil konnte nicht gespeichert werden",
     saved: "Gespeichert",
     save: "Profil speichern",

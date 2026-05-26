@@ -9,7 +9,10 @@ import { setLanguage, SUPPORTED_LANGUAGES, LanguageCode } from "@/lib/i18n";
 import i18n from "@/lib/i18n";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { colors, layout } from "@/theme";
+
+const TOLERANCE_OPTIONS_KMH = [0, 5, 10, 15];
 import type { DistanceUnit } from "@/types/models";
 
 export default function ProfileScreen() {
@@ -20,6 +23,9 @@ export default function ProfileScreen() {
 
   const showTrackedPath = useRideStore((s) => s.showTrackedPath);
   const setShowTrackedPath = useRideStore((s) => s.setShowTrackedPath);
+
+  const speedTolerance = useSettingsStore((s) => s.speedToleranceKmh);
+  const setSpeedTolerance = useSettingsStore((s) => s.setSpeedToleranceKmh);
 
   const [displayName, setDisplayName] = useState("");
   const [bikeMake, setBikeMake] = useState("");
@@ -144,6 +150,24 @@ export default function ProfileScreen() {
               <Text style={[styles.unitText, active && styles.unitTextActive]}>
                 {opt.label}
               </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.label}>{t("profile.speedTolerance")}</Text>
+      <View style={styles.unitRow}>
+        {TOLERANCE_OPTIONS_KMH.map((v) => {
+          const active = v === speedTolerance;
+          const label =
+            units === "imperial" ? `+${Math.round(v * 0.621371)} mph` : `+${v} km/h`;
+          return (
+            <Pressable
+              key={v}
+              onPress={() => setSpeedTolerance(v)}
+              style={[styles.unitChip, active && styles.unitChipActive]}
+            >
+              <Text style={[styles.unitText, active && styles.unitTextActive]}>{label}</Text>
             </Pressable>
           );
         })}

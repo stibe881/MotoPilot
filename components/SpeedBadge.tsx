@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatSpeed } from "@/lib/format";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { colors, layout } from "@/theme";
 
 /** Bottom-left speedometer + posted speed-limit sign, shown while navigating. */
@@ -11,6 +12,7 @@ export function SpeedBadge() {
   const isNavigating = useRideStore((s) => s.isNavigating);
   const speedMps = useRideStore((s) => s.currentSpeedMps);
   const speedLimitKmh = useRideStore((s) => s.currentSpeedLimit);
+  const toleranceKmh = useSettingsStore((s) => s.speedToleranceKmh);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   if (!isNavigating) return null;
@@ -23,13 +25,12 @@ export function SpeedBadge() {
       ? Math.round(speedLimitKmh * 0.621371)
       : speedLimitKmh;
 
-  // Speeding: compare in km/h with a tolerance to absorb GPS noise.
-  const SPEEDING_TOLERANCE_KMH = 5;
+  // Speeding: compare in km/h, using the rider's configured tolerance.
   const speeding =
     speedLimitKmh != null &&
     speedMps != null &&
     speedMps >= 0 &&
-    speedMps * 3.6 > speedLimitKmh + SPEEDING_TOLERANCE_KMH;
+    speedMps * 3.6 > speedLimitKmh + toleranceKmh;
 
   return (
     <View style={[styles.row, { bottom: insets.bottom + layout.spacing.lg }]} pointerEvents="none">
