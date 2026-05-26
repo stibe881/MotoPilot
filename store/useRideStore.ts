@@ -47,6 +47,10 @@ interface RideState {
   distanceToManeuver: number | null;
   setDistanceToManeuver: (m: number | null) => void;
 
+  // Live GPS speed (m/s) for the speedometer.
+  currentSpeedMps: number | null;
+  setCurrentSpeed: (mps: number | null) => void;
+
   // Live remaining distance/time to the final destination.
   remainingDistance: number | null;
   remainingDuration: number | null;
@@ -104,6 +108,7 @@ const RESET = {
   trackedPath: [] as LatLng[],
   navPosition: null as { latitude: number; longitude: number; heading: number } | null,
   distanceToManeuver: null as number | null,
+  currentSpeedMps: null as number | null,
   remainingDistance: null as number | null,
   remainingDuration: null as number | null,
   arrived: false,
@@ -116,6 +121,7 @@ export const useRideStore = create<RideState>((set, get) => ({
   setVoiceEnabled: (voiceEnabled) => set({ voiceEnabled }),
   setNavPosition: (navPosition) => set({ navPosition }),
   setDistanceToManeuver: (distanceToManeuver) => set({ distanceToManeuver }),
+  setCurrentSpeed: (currentSpeedMps) => set({ currentSpeedMps }),
   setRemaining: (remainingDistance, remainingDuration) => set({ remainingDistance, remainingDuration }),
   completeNavigation: () => set({ isNavigating: false, arrived: true, distanceToManeuver: null }),
   liveRiders: {},

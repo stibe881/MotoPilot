@@ -25,3 +25,14 @@ export function formatEta(seconds: number | undefined | null): string {
   const arrival = new Date(Date.now() + seconds * 1000);
   return arrival.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+
+/** Speed (m/s) -> { value, unit } in the rider's units. */
+export function formatSpeed(
+  mps: number | undefined | null,
+  units: DistanceUnit = "metric"
+): { value: string; unit: string } {
+  const unit = units === "imperial" ? "mph" : "km/h";
+  if (mps == null || isNaN(mps) || mps < 0) return { value: "—", unit };
+  const factor = units === "imperial" ? 2.236936 : 3.6;
+  return { value: String(Math.round(mps * factor)), unit };
+}

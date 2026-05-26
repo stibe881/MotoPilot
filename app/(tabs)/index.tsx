@@ -2,6 +2,8 @@ import { View, StyleSheet } from "react-native";
 import { DestinationSearch } from "@/components/DestinationSearch";
 import { RainRadarMap } from "@/components/RainRadarMap";
 import { RoutePreviewPanel } from "@/components/RoutePreviewPanel";
+import { SpeedBadge } from "@/components/SpeedBadge";
+import { useAutoSaveDrivenRoute } from "@/hooks/useAutoSaveDrivenRoute";
 import { useNavigationTracker } from "@/hooks/useNavigationTracker";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { colors } from "@/theme";
@@ -12,12 +14,14 @@ import { colors } from "@/theme";
 export default function DashboardScreen() {
   useNavigationTracker();
   useVoiceGuidance();
+  useAutoSaveDrivenRoute();
 
   return (
     <View style={styles.container}>
       <RainRadarMap />
       <DestinationSearch />
       <RoutePreviewPanel />
+      <SpeedBadge />
     </View>
   );
 }

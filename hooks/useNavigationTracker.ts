@@ -37,6 +37,7 @@ export function useNavigationTracker() {
               isRoundTrip,
               setNavPosition,
               setDistanceToManeuver,
+              setCurrentSpeed,
               setRemaining,
               completeNavigation,
             } = useRideStore.getState();
@@ -53,6 +54,7 @@ export function useNavigationTracker() {
               longitude: here.longitude,
               heading: pos.coords.heading != null && pos.coords.heading >= 0 ? pos.coords.heading : 0,
             });
+            setCurrentSpeed(pos.coords.speed != null && pos.coords.speed >= 0 ? pos.coords.speed : null);
 
             // Record coordinates ridden actually for the breadcrumb trail (always saved in background)
             const { trackedPath } = useRideStore.getState();

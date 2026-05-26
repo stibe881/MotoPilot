@@ -97,6 +97,7 @@ const en = {
     arrived: "You have arrived",
     arrivedVoice: "You have reached your destination",
     done: "Done",
+    ridden: "Ridden {{date}}",
   },
   search: {
     placeholder: "Where to?",

@@ -97,6 +97,7 @@ const de = {
     arrived: "Du bist angekommen",
     arrivedVoice: "Du hast dein Ziel erreicht",
     done: "Fertig",
+    ridden: "Gefahren am {{date}}",
   },
   search: {
     placeholder: "Wohin?",
