@@ -94,6 +94,9 @@ const de = {
     saveRoute: "Route speichern",
     routeName: "Route {{date}}",
     voice: "Sprachansage",
+    arrived: "Du bist angekommen",
+    arrivedVoice: "Du hast dein Ziel erreicht",
+    done: "Fertig",
   },
   search: {
     placeholder: "Wohin?",

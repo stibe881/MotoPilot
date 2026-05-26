@@ -143,6 +143,7 @@ export function DestinationSearch() {
   const insets = useSafeAreaInsets();
   const isNavigating = useRideStore((s) => s.isNavigating);
   const isPreviewing = useRideStore((s) => s.isPreviewing);
+  const arrived = useRideStore((s) => s.arrived);
   const routing = useRideStore((s) => s.routing);
   const preference = useRideStore((s) => s.preference);
   const setPreference = useRideStore((s) => s.setPreference);
@@ -190,7 +191,7 @@ export function DestinationSearch() {
     };
   }, [query, showSaved, showRoundTrip, i18n.language, t]);
 
-  if (isNavigating || isPreviewing) return null;
+  if (isNavigating || isPreviewing || arrived) return null;
 
   const toggleSaved = async () => {
     const next = !showSaved;

@@ -94,6 +94,9 @@ const en = {
     saveRoute: "Save route",
     routeName: "Route {{date}}",
     voice: "Voice guidance",
+    arrived: "You have arrived",
+    arrivedVoice: "You have reached your destination",
+    done: "Done",
   },
   search: {
     placeholder: "Where to?",

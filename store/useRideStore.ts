@@ -47,6 +47,15 @@ interface RideState {
   distanceToManeuver: number | null;
   setDistanceToManeuver: (m: number | null) => void;
 
+  // Live remaining distance/time to the final destination.
+  remainingDistance: number | null;
+  remainingDuration: number | null;
+  setRemaining: (dist: number | null, dur: number | null) => void;
+
+  // True once the rider reaches the destination (navigation auto-completes).
+  arrived: boolean;
+  completeNavigation: () => void;
+
   liveRiders: Record<string, LiveRider>;
 
   trackedPath: LatLng[];
@@ -95,6 +104,9 @@ const RESET = {
   trackedPath: [] as LatLng[],
   navPosition: null as { latitude: number; longitude: number; heading: number } | null,
   distanceToManeuver: null as number | null,
+  remainingDistance: null as number | null,
+  remainingDuration: null as number | null,
+  arrived: false,
 };
 
 export const useRideStore = create<RideState>((set, get) => ({
@@ -104,6 +116,8 @@ export const useRideStore = create<RideState>((set, get) => ({
   setVoiceEnabled: (voiceEnabled) => set({ voiceEnabled }),
   setNavPosition: (navPosition) => set({ navPosition }),
   setDistanceToManeuver: (distanceToManeuver) => set({ distanceToManeuver }),
+  setRemaining: (remainingDistance, remainingDuration) => set({ remainingDistance, remainingDuration }),
+  completeNavigation: () => set({ isNavigating: false, arrived: true, distanceToManeuver: null }),
   liveRiders: {},
   showTrackedPath: true,
   setShowTrackedPath: (showTrackedPath) => set({ showTrackedPath }),

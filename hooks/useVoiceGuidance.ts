@@ -20,12 +20,14 @@ function speechLocale(lang: string): string {
  * the navigation screen alongside useNavigationTracker.
  */
 export function useVoiceGuidance() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isNavigating = useRideStore((s) => s.isNavigating);
   const voiceEnabled = useRideStore((s) => s.voiceEnabled);
   const route = useRideStore((s) => s.route);
   const stepIndex = useRideStore((s) => s.stepIndex);
+  const arrived = useRideStore((s) => s.arrived);
   const spokenStep = useRef<number>(-1);
+  const announcedArrival = useRef(false);
 
   useEffect(() => {
     if (!isNavigating || !voiceEnabled || !route) return;
@@ -38,11 +40,21 @@ export function useVoiceGuidance() {
     Speech.speak(upcoming.instruction, { language: speechLocale(i18n.language) });
   }, [isNavigating, voiceEnabled, route, stepIndex, i18n.language]);
 
+  // Announce arrival once.
+  useEffect(() => {
+    if (arrived && voiceEnabled && !announcedArrival.current) {
+      announcedArrival.current = true;
+      Speech.stop();
+      Speech.speak(t("nav.arrivedVoice"), { language: speechLocale(i18n.language) });
+    }
+    if (!arrived) announcedArrival.current = false;
+  }, [arrived, voiceEnabled, t, i18n.language]);
+
   // Reset / silence when navigation ends or voice is muted.
   useEffect(() => {
     if (!isNavigating || !voiceEnabled) {
       spokenStep.current = -1;
-      Speech.stop();
+      if (!voiceEnabled) Speech.stop();
     }
   }, [isNavigating, voiceEnabled]);
 }

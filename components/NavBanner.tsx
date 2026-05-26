@@ -26,16 +26,46 @@ export function NavBanner() {
   const voiceEnabled = useRideStore((s) => s.voiceEnabled);
   const setVoiceEnabled = useRideStore((s) => s.setVoiceEnabled);
   const distanceToManeuver = useRideStore((s) => s.distanceToManeuver);
+  const remainingDistance = useRideStore((s) => s.remainingDistance);
+  const remainingDuration = useRideStore((s) => s.remainingDuration);
+  const arrived = useRideStore((s) => s.arrived);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
-  if (!isNavigating && !routing) return null;
+  if (!isNavigating && !routing && !arrived) return null;
+
+  // Arrival card — navigation auto-completed at the destination.
+  if (arrived) {
+    return (
+      <View style={[styles.wrap, { paddingTop: insets.top + layout.spacing.sm }]}>
+        <View style={[styles.banner, styles.arrivedBanner]}>
+          <View style={styles.row}>
+            <Ionicons name="checkmark-circle" size={36} color={colors.success} />
+            <View style={styles.instructionBox}>
+              <Text style={styles.instruction} numberOfLines={1}>
+                {t("nav.arrived")}
+              </Text>
+              {destination?.label ? (
+                <Text style={styles.stepDistance} numberOfLines={1}>
+                  {destination.label}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+          <BigButton label={t("nav.done")} icon="checkmark" variant="success" onPress={stop} />
+        </View>
+      </View>
+    );
+  }
 
   // The next maneuver is the instruction that begins the FOLLOWING step; the
   // distance to it counts down live as the rider approaches.
   const upcoming = route?.steps[stepIndex + 1] ?? route?.steps[stepIndex];
   const maneuverDistance = distanceToManeuver ?? upcoming?.distanceMeters ?? null;
+  // Remaining distance/time to the destination (falls back to route totals).
+  const totalDist = remainingDistance ?? route?.distanceMeters ?? 0;
+  const totalDur = remainingDuration ?? route?.durationSecs ?? 0;
 
   const onSave = async () => {
     if (!route || saveState !== "idle") return;
@@ -71,11 +101,11 @@ export function NavBanner() {
 
         {route ? (
           <View style={styles.summary}>
-            <Text style={styles.summaryText}>{formatDistance(route.distanceMeters, units)}</Text>
+            <Text style={styles.summaryText}>{formatDistance(totalDist, units)}</Text>
             <Text style={styles.summaryDot}>•</Text>
-            <Text style={styles.summaryText}>{formatDuration(route.durationSecs)}</Text>
+            <Text style={styles.summaryText}>{formatDuration(totalDur)}</Text>
             <Text style={styles.summaryDot}>•</Text>
-            <Text style={styles.summaryText}>{t("nav.eta")} {formatEta(route.durationSecs)}</Text>
+            <Text style={styles.summaryText}>{t("nav.eta")} {formatEta(totalDur)}</Text>
             <View style={styles.flexSpacer} />
             <Pressable
               style={styles.saveButton}
@@ -127,6 +157,9 @@ const styles = StyleSheet.create({
     gap: layout.spacing.sm,
     borderWidth: 2,
     borderColor: colors.info,
+  },
+  arrivedBanner: {
+    borderColor: colors.success,
   },
   row: {
     flexDirection: "row",
