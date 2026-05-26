@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import type { MediaProvider, NowPlaying } from "@/lib/media/types";
 import * as Linking from "expo-linking";
+import { Alert } from "react-native";
 
 // Spotify control via the Web API. Requires a Premium account and an active
 // playback device, plus a stored OAuth token in connected_services. Token
@@ -97,24 +98,35 @@ interface SpotifyNowPlaying {
 }
 
 async function wakeUpAndPlay() {
-  try {
-    // Launch Spotify App to wake up the background playback service
-    await Linking.openURL("spotify://");
-    
-    // Wait 1.5 seconds for Spotify to register its playback service
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const devicesData = await call("GET", "/devices");
-    const devices = devicesData?.devices || [];
-    if (devices.length > 0) {
-      const activeDevice = devices.find((d: any) => d.is_active) || devices[0];
-      await call("PUT", `/play?device_id=${activeDevice.id}`);
-    } else {
-      await call("PUT", "/play");
-    }
-  } catch (err) {
-    console.warn("Spotify wakeup and play failed:", err);
-  }
+  Alert.alert(
+    "📻 Spotify aufwecken",
+    "Um deine Spotify-Verbindung zu aktivieren, muss die Spotify-App einmal kurz gestartet werden. Du kannst danach sofort wieder zu MotoPilot zurückkehren!",
+    [
+      { text: "Abbrechen", style: "cancel" },
+      {
+        text: "Spotify öffnen",
+        onPress: async () => {
+          try {
+            await Linking.openURL("spotify://");
+            
+            // Wait 1.5 seconds for Spotify to register its playback service
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            
+            const devicesData = await call("GET", "/devices");
+            const devices = devicesData?.devices || [];
+            if (devices.length > 0) {
+              const activeDevice = devices.find((d: any) => d.is_active) || devices[0];
+              await call("PUT", `/play?device_id=${activeDevice.id}`);
+            } else {
+              await call("PUT", "/play");
+            }
+          } catch (err) {
+            console.warn("Spotify wakeup and play failed:", err);
+          }
+        },
+      },
+    ]
+  );
 }
 
 export const spotifyProvider: MediaProvider = {
