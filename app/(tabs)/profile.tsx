@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
 import { BigButton } from "@/components/ui/BigButton";
+import { Slider } from "@/components/ui/Slider";
 import { useAuth } from "@/lib/auth";
 import { updateMyProfile } from "@/lib/profile";
 import { setLanguage, SUPPORTED_LANGUAGES, LanguageCode } from "@/lib/i18n";
@@ -11,8 +12,6 @@ import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { colors, layout } from "@/theme";
-
-const TOLERANCE_OPTIONS_KMH = [0, 5, 10, 15];
 import type { DistanceUnit } from "@/types/models";
 
 export default function ProfileScreen() {
@@ -155,23 +154,15 @@ export default function ProfileScreen() {
         })}
       </View>
 
-      <Text style={styles.label}>{t("profile.speedTolerance")}</Text>
-      <View style={styles.unitRow}>
-        {TOLERANCE_OPTIONS_KMH.map((v) => {
-          const active = v === speedTolerance;
-          const label =
-            units === "imperial" ? `+${Math.round(v * 0.621371)} mph` : `+${v} km/h`;
-          return (
-            <Pressable
-              key={v}
-              onPress={() => setSpeedTolerance(v)}
-              style={[styles.unitChip, active && styles.unitChipActive]}
-            >
-              <Text style={[styles.unitText, active && styles.unitTextActive]}>{label}</Text>
-            </Pressable>
-          );
-        })}
+      <View style={styles.toleranceHeader}>
+        <Text style={styles.label}>{t("profile.speedTolerance")}</Text>
+        <Text style={styles.toleranceValue}>
+          {units === "imperial"
+            ? `+${Math.round(speedTolerance * 0.621371)} mph`
+            : `+${speedTolerance} km/h`}
+        </Text>
       </View>
+      <Slider value={speedTolerance} onValueChange={setSpeedTolerance} min={0} max={20} step={1} />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {saved ? <Text style={styles.saved}>{t("profile.saved")}</Text> : null}
@@ -243,6 +234,16 @@ const styles = StyleSheet.create({
     color: colors.accent, 
   },
   langFlag: { fontSize: 22 },
+  toleranceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toleranceValue: {
+    color: colors.accent,
+    fontSize: layout.font.body,
+    fontWeight: layout.fontWeight.heavy,
+  },
   error: { 
     color: colors.danger, 
     fontSize: layout.font.label, 
