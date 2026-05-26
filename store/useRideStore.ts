@@ -36,6 +36,17 @@ interface RideState {
   routing: boolean;
   routeError: string | null;
 
+  voiceEnabled: boolean;
+  setVoiceEnabled: (v: boolean) => void;
+
+  // Latest GPS fix while navigating — drives the chase camera.
+  navPosition: { latitude: number; longitude: number; heading: number } | null;
+  setNavPosition: (p: { latitude: number; longitude: number; heading: number }) => void;
+
+  // Live distance (m) to the next maneuver point, for the turn banner.
+  distanceToManeuver: number | null;
+  setDistanceToManeuver: (m: number | null) => void;
+
   liveRiders: Record<string, LiveRider>;
 
   trackedPath: LatLng[];
@@ -53,6 +64,10 @@ interface RideState {
   ) => Promise<void>;
   // Move a pin and recompute, staying in preview.
   updateWaypoint: (index: number, point: LatLng) => Promise<void>;
+  // Insert an intermediate stop (before the final point) and recompute.
+  addWaypoint: (point: LatLng) => Promise<void>;
+  // Remove an intermediate stop (start/end are protected) and recompute.
+  removeWaypoint: (index: number) => Promise<void>;
   // Leave preview and begin turn-by-turn.
   startNavigation: () => void;
 
@@ -78,11 +93,17 @@ const RESET = {
   routing: false,
   routeError: null as string | null,
   trackedPath: [] as LatLng[],
+  navPosition: null as { latitude: number; longitude: number; heading: number } | null,
+  distanceToManeuver: null as number | null,
 };
 
 export const useRideStore = create<RideState>((set, get) => ({
   preference: "curvy",
   ...RESET,
+  voiceEnabled: true,
+  setVoiceEnabled: (voiceEnabled) => set({ voiceEnabled }),
+  setNavPosition: (navPosition) => set({ navPosition }),
+  setDistanceToManeuver: (distanceToManeuver) => set({ distanceToManeuver }),
   liveRiders: {},
   showTrackedPath: true,
   setShowTrackedPath: (showTrackedPath) => set({ showTrackedPath }),
@@ -133,6 +154,37 @@ export const useRideStore = create<RideState>((set, get) => ({
     next[index] = { ...next[index], latitude: point.latitude, longitude: point.longitude };
     // For a round-trip the first and last pins are the same start location.
     if (isRoundTrip && index === 0) next[next.length - 1] = next[0];
+    set({ waypoints: next, routing: true, routeError: null });
+    try {
+      const route = await getRoute(next, get().preference, lang());
+      set({ route, routing: false });
+    } catch (e) {
+      set({ routing: false, routeError: e instanceof Error ? e.message : "Could not recompute route" });
+    }
+  },
+
+  addWaypoint: async (point) => {
+    const { waypoints } = get();
+    if (waypoints.length < 2) return;
+    const next = waypoints.slice();
+    // Insert just before the final point (destination, or closing start).
+    next.splice(next.length - 1, 0, { latitude: point.latitude, longitude: point.longitude });
+    set({ waypoints: next, routing: true, routeError: null });
+    try {
+      const route = await getRoute(next, get().preference, lang());
+      set({ route, routing: false });
+    } catch (e) {
+      set({ routing: false, routeError: e instanceof Error ? e.message : "Could not recompute route" });
+    }
+  },
+
+  removeWaypoint: async (index) => {
+    const { waypoints } = get();
+    // Protect the start (0) and the final endpoint.
+    if (index <= 0 || index >= waypoints.length - 1) return;
+    const next = waypoints.slice();
+    next.splice(index, 1);
+    if (next.length < 2) return;
     set({ waypoints: next, routing: true, routeError: null });
     try {
       const route = await getRoute(next, get().preference, lang());

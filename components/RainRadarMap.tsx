@@ -9,6 +9,7 @@ import MapView, {
   type Region,
 } from "react-native-maps";
 import * as Location from "expo-location";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, layout } from "@/theme";
 import { BigButton } from "@/components/ui/BigButton";
@@ -95,13 +96,16 @@ export function RainRadarMap() {
   const isRoundTrip = useRideStore((s) => s.isRoundTrip);
   const waypoints = useRideStore((s) => s.waypoints);
   const updateWaypoint = useRideStore((s) => s.updateWaypoint);
+  const addWaypoint = useRideStore((s) => s.addWaypoint);
+  const navPosition = useRideStore((s) => s.navPosition);
   const liveRiders = useRideStore((s) => s.liveRiders);
   const trackedPath = useRideStore((s) => s.trackedPath);
   const showTrackedPath = useRideStore((s) => s.showTrackedPath);
 
-  // Fit the map to the route once it's computed and map layout is ready.
+  // Fit the map to the whole route while previewing (not while navigating —
+  // navigation uses the chase camera below).
   useEffect(() => {
-    if (mapReady && route && route.coordinates.length > 1) {
+    if (mapReady && !isNavigating && route && route.coordinates.length > 1) {
       const routeRegion = getRouteRegion(route.coordinates);
       if (routeRegion) {
         const timer = setTimeout(() => {
@@ -110,7 +114,56 @@ export function RainRadarMap() {
         return () => clearTimeout(timer);
       }
     }
-  }, [route, mapReady]);
+  }, [route, mapReady, isNavigating]);
+
+  // Keep the screen awake while navigating, like a mounted satnav.
+  useEffect(() => {
+    if (!isNavigating) return;
+    activateKeepAwakeAsync("navigation");
+    return () => {
+      deactivateKeepAwake("navigation");
+    };
+  }, [isNavigating]);
+
+  // Chase camera: follow the rider, heading-up and tilted, like a real navi.
+  useEffect(() => {
+    if (!isNavigating || !navPosition) return;
+    mapRef.current?.animateCamera(
+      {
+        center: { latitude: navPosition.latitude, longitude: navPosition.longitude },
+        heading: navPosition.heading,
+        pitch: 50,
+        zoom: 17,
+      },
+      { duration: 700 }
+    );
+  }, [isNavigating, navPosition]);
+
+  // Snap into the chase view immediately on start; flatten back when it ends.
+  useEffect(() => {
+    if (isNavigating) {
+      (async () => {
+        try {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation,
+          });
+          mapRef.current?.animateCamera(
+            {
+              center: { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+              heading: pos.coords.heading != null && pos.coords.heading >= 0 ? pos.coords.heading : 0,
+              pitch: 50,
+              zoom: 17,
+            },
+            { duration: 600 }
+          );
+        } catch {
+          /* first watch fix will move the camera shortly */
+        }
+      })();
+    } else {
+      mapRef.current?.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
+    }
+  }, [isNavigating]);
 
   // Center on the rider once location permission is granted.
   useEffect(() => {
@@ -195,6 +248,9 @@ export function RainRadarMap() {
         mapType={mapType}
         initialRegion={DEFAULT_REGION}
         onMapReady={() => setMapReady(true)}
+        onLongPress={(e) => {
+          if (isPreviewing) addWaypoint(e.nativeEvent.coordinate);
+        }}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}

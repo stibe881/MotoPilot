@@ -25,16 +25,31 @@ export function useNavigationTracker() {
         if (status !== "granted" || cancelled) return;
 
         sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10 },
+          { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 5, timeInterval: 1000 },
           (pos) => {
-            const { route, isNavigating, stepIndex, setStepIndex, recalculate, isRoundTrip } =
-              useRideStore.getState();
+            const {
+              route,
+              isNavigating,
+              stepIndex,
+              setStepIndex,
+              recalculate,
+              isRoundTrip,
+              setNavPosition,
+              setDistanceToManeuver,
+            } = useRideStore.getState();
             if (!isNavigating || !route || !route.coordinates || route.coordinates.length < 2) return;
 
             const here = {
               latitude: pos.coords.latitude,
               longitude: pos.coords.longitude,
             };
+
+            // Feed the chase camera (heading-up follow).
+            setNavPosition({
+              latitude: here.latitude,
+              longitude: here.longitude,
+              heading: pos.coords.heading != null && pos.coords.heading >= 0 ? pos.coords.heading : 0,
+            });
 
             // Record coordinates ridden actually for the breadcrumb trail (always saved in background)
             const { trackedPath } = useRideStore.getState();
@@ -53,18 +68,21 @@ export function useNavigationTracker() {
               return;
             }
 
-            // Advance the step once we reach its end waypoint.
+            // Distance to the next maneuver (end of the current step) drives the
+            // live "in X m, turn …" banner; advance the step once we reach it.
             const step = route.steps[stepIndex];
             const endIdx = step?.wayPoints?.[1];
             const endCoord = endIdx != null && route.coordinates[endIdx] ? route.coordinates[endIdx] : undefined;
             if (
               endCoord &&
               typeof endCoord.latitude === "number" && !isNaN(endCoord.latitude) &&
-              typeof endCoord.longitude === "number" && !isNaN(endCoord.longitude) &&
-              stepIndex < route.steps.length - 1 &&
-              haversineMeters(here, endCoord) < STEP_REACHED_M
+              typeof endCoord.longitude === "number" && !isNaN(endCoord.longitude)
             ) {
-              setStepIndex(stepIndex + 1);
+              const toManeuver = haversineMeters(here, endCoord);
+              setDistanceToManeuver(toManeuver);
+              if (stepIndex < route.steps.length - 1 && toManeuver < STEP_REACHED_M) {
+                setStepIndex(stepIndex + 1);
+              }
             }
           }
         );

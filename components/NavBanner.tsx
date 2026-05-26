@@ -23,13 +23,19 @@ export function NavBanner() {
   const stepIndex = useRideStore((s) => s.stepIndex);
   const routing = useRideStore((s) => s.routing);
   const stop = useRideStore((s) => s.stopNavigation);
+  const voiceEnabled = useRideStore((s) => s.voiceEnabled);
+  const setVoiceEnabled = useRideStore((s) => s.setVoiceEnabled);
+  const distanceToManeuver = useRideStore((s) => s.distanceToManeuver);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   if (!isNavigating && !routing) return null;
 
-  const step = route?.steps[stepIndex];
+  // The next maneuver is the instruction that begins the FOLLOWING step; the
+  // distance to it counts down live as the rider approaches.
+  const upcoming = route?.steps[stepIndex + 1] ?? route?.steps[stepIndex];
+  const maneuverDistance = distanceToManeuver ?? upcoming?.distanceMeters ?? null;
 
   const onSave = async () => {
     if (!route || saveState !== "idle") return;
@@ -52,11 +58,11 @@ export function NavBanner() {
             <Text style={styles.instruction} numberOfLines={2}>
               {routing
                 ? t("nav.calculating")
-                : step?.instruction ?? t("nav.head")}
+                : upcoming?.instruction ?? t("nav.head")}
             </Text>
-            {step ? (
+            {maneuverDistance != null ? (
               <Text style={styles.stepDistance}>
-                {formatDistance(step.distanceMeters, units)}
+                {formatDistance(maneuverDistance, units)}
               </Text>
             ) : null}
           </View>
@@ -71,6 +77,18 @@ export function NavBanner() {
             <Text style={styles.summaryDot}>•</Text>
             <Text style={styles.summaryText}>{t("nav.eta")} {formatEta(route.durationSecs)}</Text>
             <View style={styles.flexSpacer} />
+            <Pressable
+              style={styles.saveButton}
+              onPress={() => setVoiceEnabled(!voiceEnabled)}
+              accessibilityRole="button"
+              accessibilityLabel={t("nav.voice")}
+            >
+              <Ionicons
+                name={voiceEnabled ? "volume-high" : "volume-mute"}
+                size={20}
+                color={voiceEnabled ? colors.info : colors.textDisabled}
+              />
+            </Pressable>
             <Pressable
               style={styles.saveButton}
               onPress={onSave}

@@ -93,6 +93,7 @@ const de = {
     saving: "…",
     saveRoute: "Route speichern",
     routeName: "Route {{date}}",
+    voice: "Sprachansage",
   },
   search: {
     placeholder: "Wohin?",
@@ -120,6 +121,8 @@ const de = {
     discard: "Verwerfen",
     startPin: "Start",
     stopPin: "Halt {{n}}",
+    addHint: "Lange auf die Karte tippen für einen Stopp",
+    removeStop: "Halt {{n}} entfernen",
   },
 } as const;
 
