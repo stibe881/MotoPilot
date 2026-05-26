@@ -99,6 +99,7 @@ const en = {
     arrivedVoice: "You have reached your destination",
     done: "Done",
     ridden: "Ridden {{date}}",
+    speedWarning: "Speed limit exceeded",
   },
   search: {
     placeholder: "Where to?",

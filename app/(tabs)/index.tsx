@@ -5,6 +5,7 @@ import { RoutePreviewPanel } from "@/components/RoutePreviewPanel";
 import { SpeedBadge } from "@/components/SpeedBadge";
 import { useAutoSaveDrivenRoute } from "@/hooks/useAutoSaveDrivenRoute";
 import { useNavigationTracker } from "@/hooks/useNavigationTracker";
+import { useSpeedWarning } from "@/hooks/useSpeedWarning";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { colors } from "@/theme";
 
@@ -14,6 +15,7 @@ import { colors } from "@/theme";
 export default function DashboardScreen() {
   useNavigationTracker();
   useVoiceGuidance();
+  useSpeedWarning();
   useAutoSaveDrivenRoute();
 
   return (

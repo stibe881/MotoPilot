@@ -99,6 +99,7 @@ const de = {
     arrivedVoice: "Du hast dein Ziel erreicht",
     done: "Fertig",
     ridden: "Gefahren am {{date}}",
+    speedWarning: "Tempolimit überschritten",
   },
   search: {
     placeholder: "Wohin?",
