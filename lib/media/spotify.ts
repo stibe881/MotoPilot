@@ -78,7 +78,11 @@ async function call(method: "PUT" | "POST" | "GET", path: string, body?: unknown
   if (res.status === 204) return null; // no content (common for transport calls)
   if (!res.ok) throw new Error(`Spotify error ${res.status}`);
   const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text || null;
+  }
 }
 
 interface SpotifyNowPlaying {
