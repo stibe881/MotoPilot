@@ -29,14 +29,7 @@
           "location",
           "voip",
           "bluetooth-central",
-          "remote-notification",
-          "processing",
-          "audio",
-          "location",
-          "voip",
-          "bluetooth-central",
-          "remote-notification",
-          "processing"
+          "remote-notification"
         ],
         "NSLocationWhenInUseUsageDescription": "MotoPilot uses your location to show your position on the map and provide turn-by-turn navigation while riding.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "MotoPilot needs background location access to keep navigation and live group ride tracking running while the screen is mounted and locked.",
@@ -47,7 +40,6 @@
         "NSMicrophoneUsageDescription": "MotoPilot needs microphone access to handle in-app calls through your connected headset.",
         "NSContactsUsageDescription": "MotoPilot reads contacts to display caller names on the high-contrast call overlay.",
         "LSApplicationQueriesSchemes": [
-          "spotify",
           "spotify"
         ]
       },
