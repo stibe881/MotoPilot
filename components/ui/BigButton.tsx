@@ -26,7 +26,7 @@ type Props = {
 
 const VARIANT_BG: Record<Variant, string> = {
   primary: colors.accent,
-  neutral: colors.surfaceElevated,
+  neutral: "rgba(20, 24, 36, 0.4)", // transparent graphite for glassmorphism
   success: colors.success,
   danger: colors.danger,
 };
@@ -40,7 +40,7 @@ const VARIANT_FG: Record<Variant, string> = {
 
 /**
  * Oversized, high-contrast button sized for riding gloves (>= 60pt).
- * Pressed state darkens visibly for clear tactile feedback through gloves.
+ * Includes subtle premium scale transform and glowing shadow effects.
  */
 export function BigButton({
   label,
@@ -65,9 +65,12 @@ export function BigButton({
       style={({ pressed }) => [
         styles.base,
         iconOnly && styles.iconOnly,
+        variant === "primary" && !disabled && styles.primaryGlow,
+        variant === "neutral" && !disabled && styles.neutralBorder,
         {
           backgroundColor: disabled ? colors.surface : VARIANT_BG[variant],
-          opacity: pressed ? 0.8 : 1,
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed && !disabled ? 0.97 : 1 }],
         },
         style,
       ]}
@@ -102,6 +105,17 @@ const styles = StyleSheet.create({
     height: layout.touchTargetLarge,
     paddingHorizontal: 0,
     borderRadius: layout.radius.pill,
+  },
+  primaryGlow: {
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  neutralBorder: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   content: {
     flexDirection: "row",

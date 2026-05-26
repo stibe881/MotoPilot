@@ -14,6 +14,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+if (supabaseUrl.includes("YOUR-PROJECT") || supabaseAnonKey.includes("your-anon-key")) {
+  console.warn(
+    "\n⚠️  [Supabase Config Warning]\n" +
+    "You are using default placeholder credentials in your .env file.\n" +
+    "Please create a Supabase project at https://supabase.com and update EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your .env file to avoid network failures.\n"
+  );
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
