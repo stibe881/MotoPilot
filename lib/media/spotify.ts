@@ -95,21 +95,21 @@ interface SpotifyNowPlaying {
 export const spotifyProvider: MediaProvider = {
   id: "spotify",
   async play() {
-    if (isDemoMode) {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) {
       demoPlaying = true;
       lastUpdate = Date.now();
       return;
     }
     try {
       await call("PUT", "/play");
-    } catch {
-      isDemoMode = true;
-      demoPlaying = true;
-      lastUpdate = Date.now();
+    } catch (e) {
+      console.warn("Spotify play failed:", e);
     }
   },
   async pause() {
-    if (isDemoMode) {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) {
       demoPlaying = false;
       demoPositionMs += Date.now() - lastUpdate;
       lastUpdate = Date.now();
@@ -117,15 +117,13 @@ export const spotifyProvider: MediaProvider = {
     }
     try {
       await call("PUT", "/pause");
-    } catch {
-      isDemoMode = true;
-      demoPlaying = false;
-      demoPositionMs += Date.now() - lastUpdate;
-      lastUpdate = Date.now();
+    } catch (e) {
+      console.warn("Spotify pause failed:", e);
     }
   },
   async next() {
-    if (isDemoMode) {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) {
       currentTrackIndex = (currentTrackIndex + 1) % RADIO_TRACKS.length;
       demoPositionMs = 0;
       lastUpdate = Date.now();
@@ -133,15 +131,13 @@ export const spotifyProvider: MediaProvider = {
     }
     try {
       await call("POST", "/next");
-    } catch {
-      isDemoMode = true;
-      currentTrackIndex = (currentTrackIndex + 1) % RADIO_TRACKS.length;
-      demoPositionMs = 0;
-      lastUpdate = Date.now();
+    } catch (e) {
+      console.warn("Spotify next failed:", e);
     }
   },
   async previous() {
-    if (isDemoMode) {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) {
       currentTrackIndex = (currentTrackIndex - 1 + RADIO_TRACKS.length) % RADIO_TRACKS.length;
       demoPositionMs = 0;
       lastUpdate = Date.now();
@@ -149,20 +145,15 @@ export const spotifyProvider: MediaProvider = {
     }
     try {
       await call("POST", "/previous");
-    } catch {
-      isDemoMode = true;
-      currentTrackIndex = (currentTrackIndex - 1 + RADIO_TRACKS.length) % RADIO_TRACKS.length;
-      demoPositionMs = 0;
-      lastUpdate = Date.now();
+    } catch (e) {
+      console.warn("Spotify previous failed:", e);
     }
   },
   async getNowPlaying(): Promise<NowPlaying | null> {
     const hasToken = await hasSpotifyToken();
-    if (!hasToken) {
-      isDemoMode = true;
-    }
 
-    if (isDemoMode) {
+    if (!hasToken) {
+      // Demo Mode for unlinked apps
       const track = RADIO_TRACKS[currentTrackIndex];
       if (demoPlaying) {
         const now = Date.now();
@@ -183,24 +174,39 @@ export const spotifyProvider: MediaProvider = {
       };
     }
 
+    // Real Spotify Web API Mode
     try {
       const data = (await call("GET", "/currently-playing")) as SpotifyNowPlaying | null;
-      if (!data?.item) return null;
+      
+      // If there is no active playback session (e.g. Spotify is closed or idle)
+      if (!data?.item) {
+        return {
+          title: "Keine Wiedergabe",
+          artist: "Öffne Spotify & starte Musik",
+          artworkUrl: null,
+          isPlaying: false,
+          durationMs: 0,
+          positionMs: 0,
+        };
+      }
+
       return {
         title: data.item.name,
         artist: data.item.artists.map((a) => a.name).join(", "),
         artworkUrl: data.item.album.images[0]?.url ?? null,
         isPlaying: data.is_playing,
         durationMs: data.item.duration_ms,
-        positionMs: data.progress_ms,
+        positionMs: data.progress_ms ?? 0,
       };
-    } catch {
-      isDemoMode = true;
-      const track = RADIO_TRACKS[currentTrackIndex];
+    } catch (err) {
+      console.warn("Spotify getNowPlaying failed:", err);
       return {
-        ...track,
-        isPlaying: demoPlaying,
-        positionMs: demoPositionMs,
+        title: "Verbindung aktiv",
+        artist: "Spotify-Player bereit",
+        artworkUrl: null,
+        isPlaying: false,
+        durationMs: 0,
+        positionMs: 0,
       };
     }
   },
