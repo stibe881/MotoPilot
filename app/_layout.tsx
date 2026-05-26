@@ -55,6 +55,7 @@ function RootNavigator() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="sign-in" />
+        <Stack.Screen name="redirect" />
       </Stack>
       {/* Incoming/active call overlay sits above all routes. */}
       <CallOverlay />
