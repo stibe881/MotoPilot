@@ -92,6 +92,11 @@ export default function MediaScreen() {
               variant="neutral"
               onPress={connectAppleMusic}
             />
+            <Pressable style={styles.toggleSetupBtn} onPress={() => setShowSetup(!showSetup)}>
+              <Text style={styles.toggleSetupText}>
+                {showSetup ? "🔧 Einstellungen ausblenden" : "🔧 Verbindungs-Details & Redirect-URI anzeigen"}
+              </Text>
+            </Pressable>
           </>
         )}
       </View>
@@ -294,5 +299,17 @@ const styles = StyleSheet.create({
     fontWeight: layout.fontWeight.bold,
     textAlign: "center",
     marginTop: 4,
+  },
+  toggleSetupBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: layout.spacing.xs,
+    marginTop: layout.spacing.sm,
+  },
+  toggleSetupText: {
+    color: colors.textSecondary,
+    fontSize: layout.font.label,
+    fontWeight: layout.fontWeight.bold,
+    textDecorationLine: "underline",
   },
 });
