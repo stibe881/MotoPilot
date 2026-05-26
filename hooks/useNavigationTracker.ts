@@ -38,6 +38,7 @@ export function useNavigationTracker() {
               setNavPosition,
               setDistanceToManeuver,
               setCurrentSpeed,
+              setCurrentSpeedLimit,
               setRemaining,
               completeNavigation,
             } = useRideStore.getState();
@@ -108,6 +109,10 @@ export function useNavigationTracker() {
             }
             const frac = route.distanceMeters > 0 ? remaining / route.distanceMeters : 0;
             setRemaining(remaining, route.durationSecs * Math.min(1, frac));
+
+            // Posted speed limit for the segment we're currently on.
+            const limit = route.speedLimits.find((r) => nearestIdx >= r.from && nearestIdx <= r.to);
+            setCurrentSpeedLimit(limit ? limit.speed : null);
 
             // Arrival: near the END of the polyline (high index guards against a
             // round-trip's start==end coordinate triggering at departure).

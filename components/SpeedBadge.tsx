@@ -5,29 +5,48 @@ import { useProfileStore } from "@/store/useProfileStore";
 import { useRideStore } from "@/store/useRideStore";
 import { colors, layout } from "@/theme";
 
-/** Bottom-left speedometer, shown only while navigating. */
+/** Bottom-left speedometer + posted speed-limit sign, shown while navigating. */
 export function SpeedBadge() {
   const insets = useSafeAreaInsets();
   const isNavigating = useRideStore((s) => s.isNavigating);
   const speedMps = useRideStore((s) => s.currentSpeedMps);
+  const speedLimitKmh = useRideStore((s) => s.currentSpeedLimit);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   if (!isNavigating) return null;
 
   const { value, unit } = formatSpeed(speedMps, units);
+  const limit =
+    speedLimitKmh == null
+      ? null
+      : units === "imperial"
+      ? Math.round(speedLimitKmh * 0.621371)
+      : speedLimitKmh;
 
   return (
-    <View style={[styles.badge, { bottom: insets.bottom + layout.spacing.lg }]} pointerEvents="none">
-      <Text style={styles.value}>{value}</Text>
-      <Text style={styles.unit}>{unit}</Text>
+    <View style={[styles.row, { bottom: insets.bottom + layout.spacing.lg }]} pointerEvents="none">
+      <View style={styles.badge}>
+        <Text style={styles.value}>{value}</Text>
+        <Text style={styles.unit}>{unit}</Text>
+      </View>
+      {limit != null ? (
+        <View style={styles.limitSign}>
+          <Text style={styles.limitValue}>{limit}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  badge: {
+  row: {
     position: "absolute",
     left: layout.spacing.md,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: layout.spacing.sm,
+  },
+  badge: {
     minWidth: 88,
     backgroundColor: colors.surfaceElevated,
     borderRadius: layout.radius.lg,
@@ -46,5 +65,21 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: layout.font.label,
     fontWeight: layout.fontWeight.bold,
+  },
+  // Round white sign with a red ring, like a European speed-limit sign.
+  limitSign: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 6,
+    borderColor: "#D52B1E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  limitValue: {
+    color: "#000000",
+    fontSize: 24,
+    fontWeight: "800",
   },
 });

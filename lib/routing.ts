@@ -18,12 +18,19 @@ export interface RouteStep {
   wayPoints: [number, number];
 }
 
+export interface SpeedLimitRange {
+  from: number; // start coordinate index (inclusive)
+  to: number; // end coordinate index (inclusive)
+  speed: number; // km/h
+}
+
 export interface ComputedRoute {
   coordinates: LatLng[];
   geojson: GeoJsonLineString;
   distanceMeters: number;
   durationSecs: number;
   steps: RouteStep[];
+  speedLimits: SpeedLimitRange[];
 }
 
 // ORS has no native "curvy" engine (that's Calimoto's secret sauce). We
@@ -65,6 +72,10 @@ interface OrsDirectionsResponse {
           way_points: [number, number];
         }[];
       }[];
+      extras?: {
+        // maxspeed.values: [startIdx, endIdx, speedKmh] (-1 = unknown).
+        maxspeed?: { values: [number, number, number][] };
+      };
     };
   }[];
 }
@@ -96,6 +107,8 @@ export async function getRoute(
       instructions: true,
       // Turn-by-turn instructions localized to the rider's app language.
       ...(language ? { language } : {}),
+      // Per-segment speed limits (km/h) for the speed-limit sign.
+      extra_info: ["maxspeed"],
       radiuses: points.map(() => -1),
       ...(options ? { options } : {}),
     }),
@@ -123,12 +136,17 @@ export async function getRoute(
     }))
   );
 
+  const speedLimits: SpeedLimitRange[] = (feature.properties.extras?.maxspeed?.values ?? [])
+    .filter(([, , speed]) => speed > 0)
+    .map(([from, to, speed]) => ({ from, to, speed }));
+
   return {
     coordinates,
     geojson: feature.geometry,
     distanceMeters: feature.properties.summary.distance,
     durationSecs: feature.properties.summary.duration,
     steps,
+    speedLimits,
   };
 }
 

@@ -51,6 +51,10 @@ interface RideState {
   currentSpeedMps: number | null;
   setCurrentSpeed: (mps: number | null) => void;
 
+  // Posted speed limit (km/h) for the current route segment, or null.
+  currentSpeedLimit: number | null;
+  setCurrentSpeedLimit: (kmh: number | null) => void;
+
   // Live remaining distance/time to the final destination.
   remainingDistance: number | null;
   remainingDuration: number | null;
@@ -109,6 +113,7 @@ const RESET = {
   navPosition: null as { latitude: number; longitude: number; heading: number } | null,
   distanceToManeuver: null as number | null,
   currentSpeedMps: null as number | null,
+  currentSpeedLimit: null as number | null,
   remainingDistance: null as number | null,
   remainingDuration: null as number | null,
   arrived: false,
@@ -122,6 +127,7 @@ export const useRideStore = create<RideState>((set, get) => ({
   setNavPosition: (navPosition) => set({ navPosition }),
   setDistanceToManeuver: (distanceToManeuver) => set({ distanceToManeuver }),
   setCurrentSpeed: (currentSpeedMps) => set({ currentSpeedMps }),
+  setCurrentSpeedLimit: (currentSpeedLimit) => set({ currentSpeedLimit }),
   setRemaining: (remainingDistance, remainingDuration) => set({ remainingDistance, remainingDuration }),
   completeNavigation: () => set({ isNavigating: false, arrived: true, distanceToManeuver: null }),
   liveRiders: {},
@@ -250,6 +256,7 @@ export const useRideStore = create<RideState>((set, get) => ({
         distanceMeters: saved.distance_meters ?? 0,
         durationSecs: saved.duration_secs ?? 0,
         steps: [],
+        speedLimits: [],
       },
       isPreviewing: true,
     });
