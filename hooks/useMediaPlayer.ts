@@ -71,13 +71,14 @@ export function useMediaPlayer() {
           }
 
           // Exchange authorization code for access & refresh tokens
+          // Sending client_id and client_secret directly in the body is officially supported
+          // by Spotify and avoids potential Base64 encoding/header bugs in the native runtime.
           const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: "Basic " + btoa(clientId + ":" + clientSecret),
             },
-            body: `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}`,
+            body: `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`,
           });
 
           if (!tokenResponse.ok) {
