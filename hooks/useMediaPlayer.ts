@@ -25,6 +25,27 @@ export function useMediaPlayer() {
 
   const active = providerFor(provider);
 
+  // Automatically restore active provider on startup if a connection exists in Supabase
+  useEffect(() => {
+    if (!user?.id) return;
+    const restoreConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("connected_services")
+          .select("provider")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!error && data?.provider) {
+          setProvider(data.provider);
+        }
+      } catch (err) {
+        console.error("Failed to restore connected service:", err);
+      }
+    };
+    restoreConnection();
+  }, [user, setProvider]);
+
   const refresh = useCallback(async () => {
     if (!active) return;
     try {

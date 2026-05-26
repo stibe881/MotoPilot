@@ -80,26 +80,22 @@ export default function MediaScreen() {
         <BigButton iconOnly icon="play-skip-forward" variant="neutral" disabled={!isConnected} onPress={next} />
       </View>
 
-      <View style={styles.providers}>
-        {isConnected ? (
-          <BigButton label={t("media.disconnect")} icon="close-circle" variant="neutral" onPress={disconnect} />
-        ) : (
-          <>
-            <BigButton label={t("media.connectSpotify")} icon="link" variant="neutral" onPress={handleConnectSpotify} />
-            <BigButton
-              label={t("media.connectApple")}
-              icon="musical-note"
-              variant="neutral"
-              onPress={connectAppleMusic}
-            />
-            <Pressable style={styles.toggleSetupBtn} onPress={() => setShowSetup(!showSetup)}>
-              <Text style={styles.toggleSetupText}>
-                {showSetup ? "🔧 Einstellungen ausblenden" : "🔧 Verbindungs-Details & Redirect-URI anzeigen"}
-              </Text>
-            </Pressable>
-          </>
-        )}
-      </View>
+      {!isConnected ? (
+        <View style={styles.providers}>
+          <BigButton label={t("media.connectSpotify")} icon="link" variant="neutral" onPress={handleConnectSpotify} />
+          <BigButton
+            label={t("media.connectApple")}
+            icon="musical-note"
+            variant="neutral"
+            onPress={connectAppleMusic}
+          />
+          <Pressable style={styles.toggleSetupBtn} onPress={() => setShowSetup(!showSetup)}>
+            <Text style={styles.toggleSetupText}>
+              {showSetup ? "🔧 Einstellungen ausblenden" : "🔧 Verbindungs-Details & Redirect-URI anzeigen"}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {showSetup && !isConnected ? (
         <View style={styles.setupCard}>

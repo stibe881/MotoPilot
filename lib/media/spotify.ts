@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { MediaProvider, NowPlaying } from "@/lib/media/types";
+import * as Linking from "expo-linking";
 
 // Spotify control via the Web API. Requires a Premium account and an active
 // playback device, plus a stored OAuth token in connected_services. Token
@@ -36,7 +37,6 @@ const RADIO_TRACKS: NowPlaying[] = [
 ];
 
 let currentTrackIndex = 0;
-let isDemoMode = false;
 let demoPlaying = false;
 let demoPositionMs = 0;
 let lastUpdate = Date.now();
@@ -96,6 +96,27 @@ interface SpotifyNowPlaying {
   } | null;
 }
 
+async function wakeUpAndPlay() {
+  try {
+    // Launch Spotify App to wake up the background playback service
+    await Linking.openURL("spotify://");
+    
+    // Wait 1.5 seconds for Spotify to register its playback service
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    
+    const devicesData = await call("GET", "/devices");
+    const devices = devicesData?.devices || [];
+    if (devices.length > 0) {
+      const activeDevice = devices.find((d: any) => d.is_active) || devices[0];
+      await call("PUT", `/play?device_id=${activeDevice.id}`);
+    } else {
+      await call("PUT", "/play");
+    }
+  } catch (err) {
+    console.warn("Spotify wakeup and play failed:", err);
+  }
+}
+
 export const spotifyProvider: MediaProvider = {
   id: "spotify",
   async play() {
@@ -106,9 +127,16 @@ export const spotifyProvider: MediaProvider = {
       return;
     }
     try {
-      await call("PUT", "/play");
+      const devicesData = await call("GET", "/devices");
+      const devices = devicesData?.devices || [];
+      if (devices.length > 0) {
+        const activeDevice = devices.find((d: any) => d.is_active) || devices[0];
+        await call("PUT", `/play?device_id=${activeDevice.id}`);
+      } else {
+        await wakeUpAndPlay();
+      }
     } catch (e) {
-      console.warn("Spotify play failed:", e);
+      await wakeUpAndPlay();
     }
   },
   async pause() {
