@@ -23,11 +23,19 @@ export function SpeedBadge() {
       ? Math.round(speedLimitKmh * 0.621371)
       : speedLimitKmh;
 
+  // Speeding: compare in km/h with a tolerance to absorb GPS noise.
+  const SPEEDING_TOLERANCE_KMH = 5;
+  const speeding =
+    speedLimitKmh != null &&
+    speedMps != null &&
+    speedMps >= 0 &&
+    speedMps * 3.6 > speedLimitKmh + SPEEDING_TOLERANCE_KMH;
+
   return (
     <View style={[styles.row, { bottom: insets.bottom + layout.spacing.lg }]} pointerEvents="none">
-      <View style={styles.badge}>
-        <Text style={styles.value}>{value}</Text>
-        <Text style={styles.unit}>{unit}</Text>
+      <View style={[styles.badge, speeding && styles.badgeOver]}>
+        <Text style={[styles.value, speeding && styles.valueOver]}>{value}</Text>
+        <Text style={[styles.unit, speeding && styles.valueOver]}>{unit}</Text>
       </View>
       {limit != null ? (
         <View style={styles.limitSign}>
@@ -56,10 +64,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.spacing.md,
     alignItems: "center",
   },
+  badgeOver: {
+    backgroundColor: colors.danger,
+    borderColor: colors.danger,
+  },
   value: {
     color: colors.textPrimary,
     fontSize: layout.font.display,
     fontWeight: layout.fontWeight.heavy,
+  },
+  valueOver: {
+    color: "#FFFFFF",
   },
   unit: {
     color: colors.textSecondary,
