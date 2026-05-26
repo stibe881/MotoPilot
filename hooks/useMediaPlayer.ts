@@ -49,36 +49,65 @@ export function useMediaPlayer() {
       // Support both Expo Go (contains /--/redirect) and standalone (motopilot://redirect)
       if (!url.includes("/--/redirect") && !url.startsWith("motopilot://redirect")) return;
 
-      const hash = url.split("#")[1];
-      if (!hash) return;
+      // Extract authorization code or error from query parameters
+      const codeMatch = url.match(/[?&]code=([^&#]+)/);
+      const code = codeMatch ? codeMatch[1] : null;
 
-      // Simple URL parameter extraction
-      const parts = hash.split("&");
-      let token: string | null = null;
-      let expiresSec: string | null = null;
-
-      for (const part of parts) {
-        const [key, val] = part.split("=");
-        if (key === "access_token") token = val;
-        if (key === "expires_in") expiresSec = val;
+      const errorMatch = url.match(/[?&]error=([^&#]+)/);
+      if (errorMatch) {
+        console.error("Spotify Auth Rejected:", errorMatch[1]);
+        return;
       }
 
-      if (token && user?.id) {
+      if (code && user?.id) {
         try {
-          const { error } = await supabase.from("connected_services").upsert({
-            user_id: user.id,
-            provider: "spotify",
-            access_token: token,
-            expires_at: expiresSec
-              ? new Date(Date.now() + parseInt(expiresSec) * 1000).toISOString()
-              : new Date(Date.now() + 3600 * 1000).toISOString(),
-          });
-          if (!error) {
-            setProvider("spotify");
-            refresh();
+          const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
+          const clientSecret = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET;
+          const redirectUri = Linking.createURL("redirect");
+
+          if (!clientId || !clientSecret) {
+            console.error("Spotify Client Credentials missing in .env");
+            return;
           }
-        } catch {
-          // Silent catch
+
+          // Exchange authorization code for access & refresh tokens
+          const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Authorization: "Basic " + btoa(clientId + ":" + clientSecret),
+            },
+            body: `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}`,
+          });
+
+          if (!tokenResponse.ok) {
+            const errText = await tokenResponse.text();
+            throw new Error(`Spotify token exchange failed: ${errText}`);
+          }
+
+          const tokenData = await tokenResponse.json();
+          const { access_token, refresh_token, expires_in } = tokenData;
+
+          if (access_token) {
+            const { error } = await supabase.from("connected_services").upsert({
+              user_id: user.id,
+              provider: "spotify",
+              access_token,
+              refresh_token: refresh_token || null,
+              expires_at: expires_in
+                ? new Date(Date.now() + expires_in * 1000).toISOString()
+                : new Date(Date.now() + 3600 * 1000).toISOString(),
+            });
+
+            if (!error) {
+              setProvider("spotify");
+              refresh();
+            } else {
+              console.error("Supabase storage error:", error.message);
+            }
+          }
+        } catch (err) {
+          console.error("Spotify Code Exchange Error:", err);
         }
       }
     };
@@ -117,7 +146,7 @@ export function useMediaPlayer() {
       "user-read-currently-playing",
       "user-read-playback-state"
     ];
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&scope=${encodeURIComponent(scopes.join(" "))}`;
 
