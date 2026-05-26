@@ -55,18 +55,75 @@ async function hasSpotifyToken(): Promise<boolean> {
   }
 }
 
-async function accessToken(): Promise<string> {
-  const { data, error } = await supabase
-    .from("connected_services")
-    .select("access_token")
-    .eq("provider", "spotify")
-    .maybeSingle();
-  if (error) throw error;
-  if (!data?.access_token) throw new Error("Spotify is not connected");
-  return data.access_token as string;
+const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
+
+interface SpotifyCreds {
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: string | null;
 }
 
-async function call(method: "PUT" | "POST" | "GET", path: string, body?: unknown) {
+async function getCreds(): Promise<SpotifyCreds | null> {
+  const { data } = await supabase
+    .from("connected_services")
+    .select("access_token, refresh_token, expires_at")
+    .eq("provider", "spotify")
+    .maybeSingle();
+  return (data as SpotifyCreds) ?? null;
+}
+
+// Refresh the access token with the stored refresh token + app credentials,
+// persisting the new token. Returns the new access token, or null if refresh
+// isn't possible (e.g. manual token without refresh_token, or missing creds).
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  try {
+    const res = await fetch(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body:
+        `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}` +
+        `&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`,
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d.access_token) return null;
+    await supabase
+      .from("connected_services")
+      .update({
+        access_token: d.access_token,
+        ...(d.refresh_token ? { refresh_token: d.refresh_token } : {}),
+        expires_at: new Date(Date.now() + (d.expires_in ?? 3600) * 1000).toISOString(),
+      })
+      .eq("provider", "spotify");
+    return d.access_token as string;
+  } catch {
+    return null;
+  }
+}
+
+async function accessToken(): Promise<string> {
+  const creds = await getCreds();
+  if (!creds?.access_token) throw new Error("Spotify is not connected");
+  // Proactively refresh shortly before expiry so calls don't 401 mid-ride.
+  if (creds.refresh_token && creds.expires_at) {
+    const expMs = new Date(creds.expires_at).getTime();
+    if (!Number.isNaN(expMs) && Date.now() > expMs - 60_000) {
+      const refreshed = await refreshAccessToken(creds.refresh_token);
+      if (refreshed) return refreshed;
+    }
+  }
+  return creds.access_token;
+}
+
+async function call(
+  method: "PUT" | "POST" | "GET",
+  path: string,
+  body?: unknown,
+  retried = false
+): Promise<any> {
   const token = await accessToken();
   const url = path.startsWith("http") ? path : `${API}${path}`;
   const res = await fetch(url, {
@@ -77,6 +134,13 @@ async function call(method: "PUT" | "POST" | "GET", path: string, body?: unknown
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+  // Token rejected → refresh once and retry.
+  if (res.status === 401 && !retried) {
+    const creds = await getCreds();
+    if (creds?.refresh_token && (await refreshAccessToken(creds.refresh_token))) {
+      return call(method, path, body, true);
+    }
+  }
   if (res.status === 204) return null; // no content (common for transport calls)
   if (!res.ok) throw new Error(`Spotify error ${res.status}`);
   const text = await res.text();
