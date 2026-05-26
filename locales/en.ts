@@ -112,6 +112,8 @@ const en = {
     fastest: "Fastest",
     shortest: "Shortest",
     scenic: "Scenic",
+    ridden: "Ridden",
+    planned: "Planned",
   },
   radar: {
     label: "Radar {{time}}",

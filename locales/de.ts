@@ -112,6 +112,8 @@ const de = {
     fastest: "Schnellste",
     shortest: "Kürzeste",
     scenic: "Landschaftlich",
+    ridden: "Gefahren",
+    planned: "Geplant",
   },
   radar: {
     label: "Radar {{time}}",

@@ -37,6 +37,7 @@ export async function saveRoute(
       distance_meters: route.distanceMeters,
       duration_secs: route.durationSecs,
       waypoints: destination ? [destination] : null,
+      source: "planned",
     })
     .select()
     .single();
@@ -77,6 +78,7 @@ export async function saveDrivenRoute(
       preference,
       geojson, // trigger derives the geometry column
       distance_meters: distance,
+      source: "ridden",
     })
     .select()
     .single();

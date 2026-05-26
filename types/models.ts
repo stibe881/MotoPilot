@@ -5,6 +5,7 @@ export type DistanceUnit = "metric" | "imperial";
 export type RoutePreference = "fastest" | "shortest" | "curvy" | "scenic";
 export type ServiceProvider = "spotify" | "apple_music" | "komoot" | "strava";
 export type MemberRole = "owner" | "admin" | "member";
+export type RouteSource = "planned" | "ridden";
 
 export interface Profile {
   id: string;
@@ -46,6 +47,7 @@ export interface SavedRoute {
   distance_meters: number | null;
   duration_secs: number | null;
   is_favorite: boolean;
+  source: RouteSource;
   shared_group_id: string | null;
   created_at: string;
   updated_at: string;

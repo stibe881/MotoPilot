@@ -400,11 +400,19 @@ export function DestinationSearch() {
                   <Text style={styles.resultText} numberOfLines={1}>
                     {r.name}
                   </Text>
-                  {r.distance_meters != null ? (
+                  <View style={styles.savedMetaRow}>
+                    <Ionicons
+                      name={r.source === "ridden" ? "speedometer" : "map"}
+                      size={13}
+                      color={r.source === "ridden" ? colors.success : colors.info}
+                    />
                     <Text style={styles.savedMeta}>
-                      {formatDistance(r.distance_meters, units)} · {r.preference}
+                      {t(r.source === "ridden" ? "search.ridden" : "search.planned")}
+                      {r.distance_meters != null
+                        ? ` · ${formatDistance(r.distance_meters, units)}`
+                        : ""}
                     </Text>
-                  ) : null}
+                  </View>
                 </Pressable>
                 <Pressable
                   style={styles.deleteButton}
@@ -532,6 +540,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.spacing.md,
     justifyContent: "center",
     gap: 2,
+  },
+  savedMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: layout.spacing.xs,
   },
   savedMeta: {
     color: colors.textSecondary,
