@@ -68,7 +68,8 @@ async function accessToken(): Promise<string> {
 
 async function call(method: "PUT" | "POST" | "GET", path: string, body?: unknown) {
   const token = await accessToken();
-  const res = await fetch(`${API}${path}`, {
+  const url = path.startsWith("http") ? path : `${API}${path}`;
+  const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -199,12 +200,13 @@ export const spotifyProvider: MediaProvider = {
     if (!hasToken) {
       // Demo Mode for unlinked apps
       const track = RADIO_TRACKS[currentTrackIndex];
+      const durationMs = track.durationMs ?? 0;
       if (demoPlaying) {
         const now = Date.now();
         const diff = now - lastUpdate;
         demoPositionMs += diff;
         lastUpdate = now;
-        if (demoPositionMs >= track.durationMs) {
+        if (demoPositionMs >= durationMs) {
           currentTrackIndex = (currentTrackIndex + 1) % RADIO_TRACKS.length;
           demoPositionMs = 0;
         }
@@ -214,7 +216,7 @@ export const spotifyProvider: MediaProvider = {
       return {
         ...track,
         isPlaying: demoPlaying,
-        positionMs: Math.min(demoPositionMs, track.durationMs),
+        positionMs: Math.min(demoPositionMs, durationMs),
       };
     }
 
@@ -252,6 +254,67 @@ export const spotifyProvider: MediaProvider = {
         durationMs: 0,
         positionMs: 0,
       };
+    }
+  },
+  async getPlaylists() {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) return [];
+    try {
+      const data = await call("GET", "https://api.spotify.com/v1/me/playlists?limit=10");
+      if (!data || !data.items) return [];
+      return data.items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        uri: item.uri,
+        artworkUrl: item.images?.[0]?.url || null,
+        tracksCount: item.tracks?.total || 0,
+      }));
+    } catch (err) {
+      console.warn("Spotify getPlaylists failed:", err);
+      return [];
+    }
+  },
+  async playPlaylist(uri: string) {
+    const hasToken = await hasSpotifyToken();
+    if (!hasToken) return;
+    try {
+      const devicesData = await call("GET", "/devices");
+      const devices = devicesData?.devices || [];
+      const activeDevice = devices.find((d: any) => d.is_active) || devices[0];
+      const playBody = { context_uri: uri };
+
+      if (activeDevice) {
+        await call("PUT", `/play?device_id=${activeDevice.id}`, playBody);
+      } else {
+        Alert.alert(
+          "📻 Spotify aufwecken",
+          "Um diese Playlist abzuspielen, muss die Spotify-App einmal kurz gestartet werden. Du kannst danach sofort wieder zu MotoPilot zurückkehren!",
+          [
+            { text: "Abbrechen", style: "cancel" },
+            {
+              text: "Spotify öffnen",
+              onPress: async () => {
+                try {
+                  await Linking.openURL("spotify://");
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  const dData = await call("GET", "/devices");
+                  const devs = dData?.devices || [];
+                  if (devs.length > 0) {
+                    const dev = devs.find((d: any) => d.is_active) || devs[0];
+                    await call("PUT", `/play?device_id=${dev.id}`, playBody);
+                  } else {
+                    await call("PUT", "/play", playBody);
+                  }
+                } catch (e) {
+                  console.warn("Play playlist on wakeup failed:", e);
+                }
+              },
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      console.warn("Spotify playPlaylist failed:", err);
     }
   },
 };

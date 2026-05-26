@@ -8,6 +8,7 @@ import { updateMyProfile } from "@/lib/profile";
 import { setLanguage, SUPPORTED_LANGUAGES, LanguageCode } from "@/lib/i18n";
 import i18n from "@/lib/i18n";
 import { useProfileStore } from "@/store/useProfileStore";
+import { useRideStore } from "@/store/useRideStore";
 import { colors, layout } from "@/theme";
 import type { DistanceUnit } from "@/types/models";
 
@@ -16,6 +17,9 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const profile = useProfileStore((s) => s.profile);
   const setProfile = useProfileStore((s) => s.setProfile);
+
+  const showTrackedPath = useRideStore((s) => s.showTrackedPath);
+  const setShowTrackedPath = useRideStore((s) => s.setShowTrackedPath);
 
   const [displayName, setDisplayName] = useState("");
   const [bikeMake, setBikeMake] = useState("");
@@ -118,6 +122,27 @@ export default function ProfileScreen() {
               <Text style={styles.langFlag}>{lang.flag}</Text>
               <Text style={[styles.unitText, active && styles.unitTextActive]}>
                 {lang.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.label}>Gefahrene Strecke</Text>
+      <View style={styles.unitRow}>
+        {([
+          { key: true, label: "Anzeigen" },
+          { key: false, label: "Ausblenden" },
+        ] as const).map((opt) => {
+          const active = opt.key === showTrackedPath;
+          return (
+            <Pressable
+              key={opt.label}
+              onPress={() => setShowTrackedPath(opt.key)}
+              style={[styles.unitChip, active && styles.unitChipActive]}
+            >
+              <Text style={[styles.unitText, active && styles.unitTextActive]}>
+                {opt.label}
               </Text>
             </Pressable>
           );

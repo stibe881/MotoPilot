@@ -61,7 +61,7 @@ export async function setupCallKeep(): Promise<void> {
 
     const { setCall, setState } = useCallStore.getState();
 
-    RNCallKeep.addEventListener("answerCall", ({ callUUID }) => {
+    RNCallKeep.addEventListener("answerCall", ({ callUUID }: any) => {
       RNCallKeep.setCurrentCallActive(callUUID);
       setState("active");
     });

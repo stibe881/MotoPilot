@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import * as Linking from "expo-linking";
 import { ScreenScaffold } from "@/components/ui/ScreenScaffold";
@@ -14,6 +14,8 @@ export default function MediaScreen() {
   const {
     nowPlaying,
     isConnected,
+    playlists,
+    playPlaylist,
     play,
     pause,
     next,
@@ -94,6 +96,39 @@ export default function MediaScreen() {
               {showSetup ? "🔧 Einstellungen ausblenden" : "🔧 Verbindungs-Details & Redirect-URI anzeigen"}
             </Text>
           </Pressable>
+        </View>
+      ) : null}
+
+      {isConnected && playlists && playlists.length > 0 ? (
+        <View style={styles.playlistsContainer}>
+          <Text style={styles.playlistsTitle}>🎵 DEINE SPOTIFY PLAYLISTS</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.playlistsScroll}
+          >
+            {playlists.map((playlist) => (
+              <Pressable
+                key={playlist.id}
+                style={styles.playlistCard}
+                onPress={() => playPlaylist(playlist.uri)}
+              >
+                {playlist.artworkUrl ? (
+                  <Image source={{ uri: playlist.artworkUrl }} style={styles.playlistArt} />
+                ) : (
+                  <View style={[styles.playlistArt, styles.playlistArtPlaceholder]}>
+                    <Text style={styles.placeholderIcon}>💿</Text>
+                  </View>
+                )}
+                <Text style={styles.playlistName} numberOfLines={1}>
+                  {playlist.name}
+                </Text>
+                <Text style={styles.playlistTracks}>
+                  {playlist.tracksCount} Songs
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
 
@@ -307,5 +342,60 @@ const styles = StyleSheet.create({
     fontSize: layout.font.label,
     fontWeight: layout.fontWeight.bold,
     textDecorationLine: "underline",
+  },
+  playlistsContainer: {
+    width: "100%",
+    marginTop: layout.spacing.lg,
+    paddingHorizontal: layout.spacing.xs,
+    paddingBottom: 100, // push content above bottom navigation menu bar
+  },
+  playlistsTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "bold",
+    letterSpacing: 1,
+    marginBottom: layout.spacing.md,
+    opacity: 0.8,
+  },
+  playlistsScroll: {
+    gap: layout.spacing.md,
+    paddingRight: layout.spacing.lg,
+  },
+  playlistCard: {
+    width: 120,
+    alignItems: "center",
+    backgroundColor: "rgba(20, 24, 36, 0.3)",
+    borderRadius: layout.radius.md,
+    padding: layout.spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  playlistArt: {
+    width: 100,
+    height: 100,
+    borderRadius: layout.radius.sm,
+    marginBottom: layout.spacing.xs,
+  },
+  playlistArtPlaceholder: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  placeholderIcon: {
+    fontSize: 32,
+  },
+  playlistName: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "bold",
+    textAlign: "center",
+    width: "100%",
+    marginTop: 2,
+  },
+  playlistTracks: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 1,
   },
 });

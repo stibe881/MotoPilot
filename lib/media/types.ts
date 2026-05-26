@@ -9,6 +9,14 @@ export interface NowPlaying {
   positionMs: number | null;
 }
 
+export interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  uri: string;
+  artworkUrl: string | null;
+  tracksCount: number;
+}
+
 export interface MediaProvider {
   id: ServiceProvider;
   play(): Promise<void>;
@@ -16,4 +24,6 @@ export interface MediaProvider {
   next(): Promise<void>;
   previous(): Promise<void>;
   getNowPlaying(): Promise<NowPlaying | null>;
+  getPlaylists?(): Promise<SpotifyPlaylist[]>;
+  playPlaylist?(uri: string): Promise<void>;
 }

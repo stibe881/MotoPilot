@@ -45,6 +45,34 @@ function buildTileTemplate(host: string, frame: RainFrame): string {
   return `${host}${frame.path}/${TILE_SIZE}/{z}/{x}/{y}/${COLOR_SCHEME}/${OPTIONS}.png`;
 }
 
+function getRouteRegion(coordinates: { latitude: number; longitude: number }[]): Region | null {
+  if (coordinates.length === 0) return null;
+  let minLat = coordinates[0].latitude;
+  let maxLat = coordinates[0].latitude;
+  let minLng = coordinates[0].longitude;
+  let maxLng = coordinates[0].longitude;
+
+  for (const c of coordinates) {
+    if (c.latitude < minLat) minLat = c.latitude;
+    if (c.latitude > maxLat) maxLat = c.latitude;
+    if (c.longitude < minLng) minLng = c.longitude;
+    if (c.longitude > maxLng) maxLng = c.longitude;
+  }
+
+  const centerLat = (minLat + maxLat) / 2;
+  const centerLng = (minLng + maxLng) / 2;
+  
+  const latDelta = Math.max(0.015, (maxLat - minLat) * 1.4);
+  const lngDelta = Math.max(0.015, (maxLng - minLng) * 1.4);
+
+  return {
+    latitude: centerLat,
+    longitude: centerLng,
+    latitudeDelta: latDelta,
+    longitudeDelta: lngDelta,
+  };
+}
+
 export function RainRadarMap() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -58,40 +86,49 @@ export function RainRadarMap() {
   const [playing, setPlaying] = useState(true);
   const [loadingRadar, setLoadingRadar] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const [mapType, setMapType] = useState<"standard" | "hybrid">("standard");
 
   const route = useRideStore((s) => s.route);
   const destination = useRideStore((s) => s.destination);
   const isNavigating = useRideStore((s) => s.isNavigating);
   const liveRiders = useRideStore((s) => s.liveRiders);
+  const trackedPath = useRideStore((s) => s.trackedPath);
+  const showTrackedPath = useRideStore((s) => s.showTrackedPath);
 
-  // Fit the map to the route once it's computed.
+  // Fit the map to the route once it's computed and map layout is ready.
   useEffect(() => {
-    if (route && route.coordinates.length > 1) {
-      mapRef.current?.fitToCoordinates(route.coordinates, {
-        edgePadding: { top: 140, right: 60, bottom: 200, left: 60 },
-        animated: true,
-      });
+    if (mapReady && route && route.coordinates.length > 1) {
+      const routeRegion = getRouteRegion(route.coordinates);
+      if (routeRegion) {
+        const timer = setTimeout(() => {
+          mapRef.current?.animateToRegion(routeRegion, 500);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [route]);
+  }, [route, mapReady]);
 
   // Center on the rider once location permission is granted.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted" || cancelled) return;
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      if (cancelled) return;
-      const next: Region = {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        latitudeDelta: 0.4,
-        longitudeDelta: 0.4,
-      };
-      setRegion(next);
-      mapRef.current?.animateToRegion(next, 600);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted" || cancelled) return;
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (cancelled) return;
+        const next: Region = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          latitudeDelta: 0.4,
+          longitudeDelta: 0.4,
+        };
+        mapRef.current?.animateToRegion(next, 500);
+      } catch (err) {
+        console.warn("Failed to retrieve initial location:", err);
+      }
     })();
     return () => {
       cancelled = true;
@@ -151,9 +188,8 @@ export function RainRadarMap() {
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT} // Apple Maps (MapKit) on iOS
         userInterfaceStyle="dark"
+        mapType={mapType}
         initialRegion={DEFAULT_REGION}
-        region={region}
-        onRegionChangeComplete={setRegion}
         onMapReady={() => setMapReady(true)}
         showsUserLocation
         showsMyLocationButton={false}
@@ -163,18 +199,18 @@ export function RainRadarMap() {
       >
         {mapReady && radarVisible && tileTemplate ? (
           <UrlTile
-            key={tileTemplate}
+            key="weather-radar-overlay"
             urlTemplate={tileTemplate}
             tileSize={TILE_SIZE}
             zIndex={1}
             opacity={0.7}
             shouldReplaceMapContent={false}
             minimumZ={2}
-            maximumZ={12}
+            maximumZ={7} // RainViewer caps public tiles at zoom 7; levels 8+ are automatically scaled natively!
           />
         ) : null}
 
-        {route ? (
+        {route && route.coordinates.length >= 2 ? (
           <Polyline
             coordinates={route.coordinates}
             strokeColor={colors.info}
@@ -183,7 +219,18 @@ export function RainRadarMap() {
           />
         ) : null}
 
-        {destination ? (
+        {showTrackedPath && trackedPath.length >= 2 ? (
+          <Polyline
+            coordinates={trackedPath}
+            strokeColor={colors.accent}
+            strokeWidth={8}
+            zIndex={3}
+          />
+        ) : null}
+
+        {destination && 
+         typeof destination.latitude === "number" && !isNaN(destination.latitude) && 
+         typeof destination.longitude === "number" && !isNaN(destination.longitude) ? (
           <Marker
             coordinate={destination}
             title={destination.label ?? t("radar.destination")}
@@ -192,7 +239,10 @@ export function RainRadarMap() {
         ) : null}
 
         {Object.values(liveRiders)
-          .filter((r) => !r.isSelf)
+          .filter((r) => !r.isSelf && 
+                         r.position && 
+                         typeof r.position.latitude === "number" && !isNaN(r.position.latitude) &&
+                         typeof r.position.longitude === "number" && !isNaN(r.position.longitude))
           .map((rider) => (
             <Marker
               key={rider.userId}
@@ -249,9 +299,29 @@ export function RainRadarMap() {
         />
         <BigButton
           iconOnly
+          icon={mapType === "hybrid" ? "earth" : "earth-outline"}
+          variant={mapType === "hybrid" ? "primary" : "neutral"}
+          onPress={() => setMapType((m) => (m === "standard" ? "hybrid" : "standard"))}
+        />
+        <BigButton
+          iconOnly
           icon="locate"
           variant="neutral"
-          onPress={() => mapRef.current?.animateToRegion(region, 500)}
+          onPress={async () => {
+            try {
+              const pos = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
+              mapRef.current?.animateToRegion({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }, 500);
+            } catch (err) {
+              console.warn("Locate centering failed:", err);
+            }
+          }}
         />
       </View>
     </View>

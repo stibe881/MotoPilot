@@ -33,6 +33,111 @@ async function currentLatLng() {
   return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
 }
 
+interface CustomSliderProps {
+  value: number;
+  onValueChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+function CustomSlider({
+  value,
+  onValueChange,
+  min = 30,
+  max = 300,
+  step = 10,
+}: CustomSliderProps) {
+  const [sliderWidth, setSliderWidth] = useState(0);
+
+  const handleTouch = (evt: any) => {
+    if (sliderWidth <= 0) return;
+    const locationX = evt.nativeEvent.locationX;
+    const pct = Math.max(0, Math.min(1, locationX / sliderWidth));
+    const rawVal = min + pct * (max - min);
+    const steppedVal = Math.round(rawVal / step) * step;
+    onValueChange(Math.max(min, Math.min(max, steppedVal)));
+  };
+
+  const pct = (value - min) / (max - min);
+
+  return (
+    <View style={sliderStyles.container}>
+      <View
+        style={sliderStyles.trackContainer}
+        onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={handleTouch}
+        onResponderMove={handleTouch}
+      >
+        <View style={sliderStyles.trackBackground} pointerEvents="none" />
+        <View style={[sliderStyles.trackFill, { width: `${pct * 100}%` }]} pointerEvents="none" />
+        <View style={[sliderStyles.thumb, { left: `${pct * 100}%` }]} pointerEvents="none" />
+      </View>
+      <View style={sliderStyles.labels}>
+        <Text style={sliderStyles.labelText}>{min} km</Text>
+        <Text style={sliderStyles.valueText}>{value} km</Text>
+        <Text style={sliderStyles.labelText}>{max} km</Text>
+      </View>
+    </View>
+  );
+}
+
+const sliderStyles = StyleSheet.create({
+  container: {
+    marginVertical: 10,
+    width: "100%",
+  },
+  trackContainer: {
+    height: 40,
+    justifyContent: "center",
+    position: "relative",
+    width: "100%",
+  },
+  trackBackground: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 3,
+    height: 6,
+    width: "100%",
+  },
+  trackFill: {
+    backgroundColor: colors.accent,
+    borderRadius: 3,
+    height: 6,
+    position: "absolute",
+  },
+  thumb: {
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.accent,
+    borderRadius: 12,
+    borderWidth: 3,
+    height: 24,
+    marginLeft: -12,
+    position: "absolute",
+    width: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  labels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  labelText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  valueText: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});
+
 export function DestinationSearch() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -41,6 +146,7 @@ export function DestinationSearch() {
   const preference = useRideStore((s) => s.preference);
   const setPreference = useRideStore((s) => s.setPreference);
   const navigateTo = useRideStore((s) => s.navigateTo);
+  const navigateToRoundTrip = useRideStore((s) => s.navigateToRoundTrip);
   const loadSavedRoute = useRideStore((s) => s.loadSavedRoute);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
@@ -50,8 +156,12 @@ export function DestinationSearch() {
   const [error, setError] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
   const [saved, setSaved] = useState<SavedRoute[]>([]);
+  const [showRoundTrip, setShowRoundTrip] = useState(false);
+  const [targetDistance, setTargetDistance] = useState(100);
+  const [direction, setDirection] = useState<"N" | "E" | "S" | "W" | "ANY">("ANY");
+  const [generatingLoop, setGeneratingLoop] = useState(false);
 
-  if (isNavigating || routing) return null;
+  if (isNavigating) return null;
 
   const toggleSaved = async () => {
     const next = !showSaved;
@@ -133,22 +243,113 @@ export function DestinationSearch() {
         </Pressable>
       </View>
 
-      <View style={styles.prefRow}>
-        {PREFERENCES.map((p) => {
-          const active = p.key === preference;
-          return (
-            <Pressable
-              key={p.key}
-              onPress={() => setPreference(p.key)}
-              style={[styles.chip, active && styles.chipActive]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(`search.${p.key}`)}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* Roundtrip Loop Toggle Button */}
+      <Pressable
+        style={[styles.roundTripToggleBtn, showRoundTrip && styles.roundTripToggleBtnActive]}
+        onPress={() => {
+          setShowRoundTrip(!showRoundTrip);
+          setShowSaved(false);
+          setResults([]);
+        }}
+      >
+        <Ionicons
+          name={showRoundTrip ? "compass" : "compass-outline"}
+          size={18}
+          color={showRoundTrip ? colors.onAccent : colors.textPrimary}
+        />
+        <Text style={[styles.roundTripToggleText, showRoundTrip && styles.roundTripToggleTextActive]}>
+          Rundtour-Planer
+        </Text>
+      </Pressable>
+
+      {/* Roundtrip Planner Panel */}
+      {showRoundTrip ? (
+        <View style={styles.roundTripPanel}>
+          <Text style={styles.sectionTitle}>1. Ziel-Distanz</Text>
+          <CustomSlider
+            value={targetDistance}
+            onValueChange={setTargetDistance}
+            min={30}
+            max={300}
+            step={10}
+          />
+
+          <Text style={styles.sectionTitle}>2. Himmelsrichtung</Text>
+          <View style={styles.roundTripRow}>
+            {([
+              { key: "N", label: "Nord", icon: "arrow-up-outline" },
+              { key: "E", label: "Ost", icon: "arrow-forward-outline" },
+              { key: "S", label: "Süd", icon: "arrow-down-outline" },
+              { key: "W", label: "West", icon: "arrow-back-outline" },
+              { key: "ANY", label: "Zufall", icon: "shuffle-outline" },
+            ] as const).map((dir) => (
+              <Pressable
+                key={dir.key}
+                style={[styles.smallChip, direction === dir.key && styles.smallChipActive]}
+                onPress={() => setDirection(dir.key)}
+              >
+                <View style={styles.directionChipContent}>
+                  <Ionicons
+                    name={dir.icon}
+                    size={13}
+                    color={direction === dir.key ? colors.accent : colors.textSecondary}
+                  />
+                  <Text style={[styles.smallChipText, direction === dir.key && styles.smallChipTextActive]}>
+                    {dir.label}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.sectionTitle}>3. Routen-Fahrstil (Präferenz)</Text>
+          <View style={styles.roundTripRow}>
+            {PREFERENCES.map((p) => {
+              const active = p.key === preference;
+              return (
+                <Pressable
+                  key={p.key}
+                  onPress={() => setPreference(p.key)}
+                  style={[styles.smallChip, active && styles.smallChipActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.smallChipText, active && styles.smallChipTextActive]}>
+                    {t(`search.${p.key}`)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Pressable
+            style={styles.generateBtn}
+            onPress={async () => {
+              setGeneratingLoop(true);
+              setError(null);
+              try {
+                const from = await currentLatLng();
+                await navigateToRoundTrip(from, targetDistance, direction);
+                setShowRoundTrip(false);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Rundtour konnte nicht generiert werden.");
+              } finally {
+                setGeneratingLoop(false);
+              }
+            }}
+            disabled={generatingLoop}
+          >
+            {generatingLoop ? (
+              <ActivityIndicator color={colors.onAccent} />
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={16} color={colors.onAccent} />
+                <Text style={styles.generateBtnText}>Epische Rundtour generieren</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -361,5 +562,107 @@ const styles = StyleSheet.create({
   resultText: {
     color: colors.textPrimary,
     fontSize: layout.font.body,
+  },
+  roundTripToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: layout.spacing.sm,
+    backgroundColor: "rgba(12, 14, 20, 0.8)",
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: layout.radius.sm,
+    paddingVertical: 10,
+    marginTop: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  roundTripToggleBtnActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  roundTripToggleText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  roundTripToggleTextActive: {
+    color: colors.onAccent,
+  },
+  roundTripPanel: {
+    backgroundColor: "rgba(12, 14, 20, 0.95)",
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: layout.radius.md,
+    padding: layout.spacing.md,
+    gap: layout.spacing.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  sectionTitle: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  roundTripRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: layout.spacing.xs,
+    marginBottom: layout.spacing.xs,
+  },
+  smallChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: layout.radius.sm,
+    backgroundColor: "rgba(30, 34, 46, 0.8)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  smallChipActive: {
+    backgroundColor: "rgba(255, 94, 0, 0.15)",
+    borderColor: colors.accent,
+  },
+  smallChipText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  smallChipTextActive: {
+    color: colors.accent,
+  },
+  directionChipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  generateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: layout.spacing.sm,
+    backgroundColor: colors.accent,
+    borderRadius: layout.radius.sm,
+    paddingVertical: 12,
+    marginTop: layout.spacing.xs,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  generateBtnText: {
+    color: colors.onAccent,
+    fontSize: 13,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });

@@ -93,7 +93,8 @@ export async function getRoute(
       coordinates: points.map((p) => [p.longitude, p.latitude]),
       preference: pref,
       instructions: true,
-      ...(options ?? {}),
+      radiuses: points.map(() => -1),
+      ...(options ? { options } : {}),
     }),
   });
 

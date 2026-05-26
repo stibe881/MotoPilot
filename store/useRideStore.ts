@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getRoute, type ComputedRoute } from "@/lib/routing";
 import type { LatLng, RoutePreference, SavedRoute, Waypoint } from "@/types/models";
+import { generateRoundTripWaypoints } from "@/lib/roundTrip";
 
 export interface LiveRider {
   userId: string;
@@ -23,8 +24,14 @@ interface RideState {
   // Live group riders, keyed by userId, for map markers.
   liveRiders: Record<string, LiveRider>;
 
+  // Driven trail (breadcrumb path) tracking
+  trackedPath: LatLng[];
+  showTrackedPath: boolean;
+  setShowTrackedPath: (show: boolean) => void;
+
   setPreference: (p: RoutePreference) => void;
   navigateTo: (from: LatLng, destination: Waypoint) => Promise<void>;
+  navigateToRoundTrip: (from: LatLng, distanceKm: number, direction: "N" | "E" | "S" | "W" | "ANY") => Promise<void>;
   recalculate: (from: LatLng) => Promise<void>;
   loadSavedRoute: (saved: SavedRoute) => void;
   setStepIndex: (i: number) => void;
@@ -45,11 +52,14 @@ export const useRideStore = create<RideState>((set, get) => ({
   routing: false,
   routeError: null,
   liveRiders: {},
+  trackedPath: [],
+  showTrackedPath: true,
+  setShowTrackedPath: (showTrackedPath) => set({ showTrackedPath }),
 
   setPreference: (preference) => set({ preference }),
 
   navigateTo: async (from, destination) => {
-    set({ routing: true, routeError: null, destination });
+    set({ routing: true, routeError: null, destination, trackedPath: [] });
     try {
       const route = await getRoute([from, destination], get().preference);
       set({ route, isNavigating: true, stepIndex: 0, routing: false });
@@ -58,6 +68,32 @@ export const useRideStore = create<RideState>((set, get) => ({
         routing: false,
         routeError: e instanceof Error ? e.message : "Could not compute route",
       });
+      throw e;
+    }
+  },
+
+  navigateToRoundTrip: async (from, distanceKm, direction) => {
+    set({ routing: true, routeError: null, trackedPath: [] });
+    try {
+      const waypoints = generateRoundTripWaypoints(from, distanceKm, direction);
+      const route = await getRoute(waypoints, get().preference);
+      set({
+        route,
+        isNavigating: true,
+        stepIndex: 0,
+        routing: false,
+        destination: {
+          latitude: from.latitude,
+          longitude: from.longitude,
+          label: `Rundtour (${distanceKm} km, Richtung ${direction})`,
+        },
+      });
+    } catch (e) {
+      set({
+        routing: false,
+        routeError: e instanceof Error ? e.message : "Could not compute round trip",
+      });
+      throw e;
     }
   },
 
@@ -97,13 +133,14 @@ export const useRideStore = create<RideState>((set, get) => ({
       stepIndex: 0,
       routing: false,
       routeError: null,
+      trackedPath: [],
     });
   },
 
   setStepIndex: (stepIndex) => set({ stepIndex }),
 
   stopNavigation: () =>
-    set({ isNavigating: false, route: null, destination: null, stepIndex: 0, routeError: null }),
+    set({ isNavigating: false, route: null, destination: null, stepIndex: 0, routeError: null, trackedPath: [] }),
 
   upsertRider: (rider) =>
     set((s) => ({ liveRiders: { ...s.liveRiders, [rider.userId]: rider } })),

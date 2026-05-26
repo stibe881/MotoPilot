@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as Linking from "expo-linking";
 import { appleMusicProvider, requestAppleMusicAuth } from "@/lib/media/appleMusic";
 import { spotifyProvider } from "@/lib/media/spotify";
@@ -24,6 +24,33 @@ export function useMediaPlayer() {
   const setNowPlaying = useMediaStore((s) => s.setNowPlaying);
 
   const active = providerFor(provider);
+
+  const [playlists, setPlaylists] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!active) {
+      setPlaylists([]);
+      return;
+    }
+    const getPlaylists = active.getPlaylists;
+    if (!getPlaylists) {
+      setPlaylists([]);
+      return;
+    }
+    let activeRequest = true;
+    const fetchPlaylists = async () => {
+      try {
+        const list = await getPlaylists();
+        if (activeRequest) setPlaylists(list);
+      } catch (err) {
+        console.warn("Failed to fetch playlists:", err);
+      }
+    };
+    fetchPlaylists();
+    return () => {
+      activeRequest = false;
+    };
+  }, [active]);
 
   // Automatically restore active provider on startup if a connection exists in Supabase
   useEffect(() => {
@@ -217,6 +244,8 @@ export function useMediaPlayer() {
   return {
     provider,
     nowPlaying,
+    playlists,
+    playPlaylist: active?.playPlaylist ? active.playPlaylist : async () => {},
     isConnected: active !== null,
     play: () => control("play"),
     pause: () => control("pause"),
