@@ -90,15 +90,18 @@ export function useMediaPlayer() {
           const { access_token, refresh_token, expires_in } = tokenData;
 
           if (access_token) {
-            const { error } = await supabase.from("connected_services").upsert({
-              user_id: user.id,
-              provider: "spotify",
-              access_token,
-              refresh_token: refresh_token || null,
-              expires_at: expires_in
-                ? new Date(Date.now() + expires_in * 1000).toISOString()
-                : new Date(Date.now() + 3600 * 1000).toISOString(),
-            });
+            const { error } = await supabase.from("connected_services").upsert(
+              {
+                user_id: user.id,
+                provider: "spotify",
+                access_token,
+                refresh_token: refresh_token || null,
+                expires_at: expires_in
+                  ? new Date(Date.now() + expires_in * 1000).toISOString()
+                  : new Date(Date.now() + 3600 * 1000).toISOString(),
+              },
+              { onConflict: "user_id,provider" }
+            );
 
             if (!error) {
               setProvider("spotify");
@@ -160,12 +163,15 @@ export function useMediaPlayer() {
       const cleanToken = token.trim();
       if (!cleanToken) throw new Error("Token cannot be empty");
 
-      const { error } = await supabase.from("connected_services").upsert({
-        user_id: user.id,
-        provider: "spotify",
-        access_token: cleanToken,
-        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-      });
+      const { error } = await supabase.from("connected_services").upsert(
+        {
+          user_id: user.id,
+          provider: "spotify",
+          access_token: cleanToken,
+          expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+        },
+        { onConflict: "user_id,provider" }
+      );
       if (error) throw error;
       setProvider("spotify");
       refresh();
