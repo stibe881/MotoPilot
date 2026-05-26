@@ -107,8 +107,6 @@ export async function getRoute(
       instructions: true,
       // Turn-by-turn instructions localized to the rider's app language.
       ...(language ? { language } : {}),
-      // Per-segment speed limits (km/h) for the speed-limit sign.
-      extra_info: ["maxspeed"],
       radiuses: points.map(() => -1),
       ...(options ? { options } : {}),
     }),
