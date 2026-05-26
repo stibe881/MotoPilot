@@ -27,7 +27,7 @@ export function useNavigationTracker() {
         sub = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10 },
           (pos) => {
-            const { route, isNavigating, stepIndex, setStepIndex, recalculate, destination } =
+            const { route, isNavigating, stepIndex, setStepIndex, recalculate, isRoundTrip } =
               useRideStore.getState();
             if (!isNavigating || !route || !route.coordinates || route.coordinates.length < 2) return;
 
@@ -46,7 +46,6 @@ export function useNavigationTracker() {
             // Off-route → recompute (rate-limited).
             // For planned scenic round-trips, do not automatically recalculate
             // to avoid destroying the planned scenic loop shape.
-            const isRoundTrip = destination?.label?.includes("Rundtour");
             const offBy = distanceToPath(here, route.coordinates);
             if (!isRoundTrip && offBy > OFF_ROUTE_M && Date.now() - lastRecalc.current > RECALC_COOLDOWN_MS) {
               lastRecalc.current = Date.now();

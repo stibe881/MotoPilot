@@ -113,6 +113,14 @@ const de = {
     destination: "Ziel",
     headset: "Headset {{pct}}%",
   },
+  plan: {
+    title: "Routenvorschau",
+    editHint: "Pins ziehen, um die Route anzupassen",
+    start: "Navigation starten",
+    discard: "Verwerfen",
+    startPin: "Start",
+    stopPin: "Halt {{n}}",
+  },
 } as const;
 
 export default de;

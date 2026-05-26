@@ -1,6 +1,7 @@
 import { View, StyleSheet } from "react-native";
 import { DestinationSearch } from "@/components/DestinationSearch";
 import { RainRadarMap } from "@/components/RainRadarMap";
+import { RoutePreviewPanel } from "@/components/RoutePreviewPanel";
 import { useNavigationTracker } from "@/hooks/useNavigationTracker";
 import { colors } from "@/theme";
 
@@ -14,6 +15,7 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <RainRadarMap />
       <DestinationSearch />
+      <RoutePreviewPanel />
     </View>
   );
 }

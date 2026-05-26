@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { geocode, type GeocodeResult } from "@/lib/routing";
+import { searchPlaces, type PlaceResult } from "@/lib/geocoding";
 import { deleteSavedRoute, listSavedRoutes } from "@/lib/routes";
 import { formatDistance } from "@/lib/format";
 import { useProfileStore } from "@/store/useProfileStore";
@@ -139,19 +139,20 @@ const sliderStyles = StyleSheet.create({
 });
 
 export function DestinationSearch() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const isNavigating = useRideStore((s) => s.isNavigating);
+  const isPreviewing = useRideStore((s) => s.isPreviewing);
   const routing = useRideStore((s) => s.routing);
   const preference = useRideStore((s) => s.preference);
   const setPreference = useRideStore((s) => s.setPreference);
-  const navigateTo = useRideStore((s) => s.navigateTo);
-  const navigateToRoundTrip = useRideStore((s) => s.navigateToRoundTrip);
+  const planTo = useRideStore((s) => s.planTo);
+  const planRoundTrip = useRideStore((s) => s.planRoundTrip);
   const loadSavedRoute = useRideStore((s) => s.loadSavedRoute);
   const units = useProfileStore((s) => s.profile?.units ?? "metric");
 
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GeocodeResult[]>([]);
+  const [results, setResults] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
@@ -161,7 +162,35 @@ export function DestinationSearch() {
   const [direction, setDirection] = useState<"N" | "E" | "S" | "W" | "ANY">("ANY");
   const [generatingLoop, setGeneratingLoop] = useState(false);
 
-  if (isNavigating) return null;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Type-ahead place/POI suggestions (debounced) while typing in "Where to?".
+  useEffect(() => {
+    if (showSaved || showRoundTrip) return;
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      setError(null);
+      try {
+        const near = await currentLatLng().catch(() => undefined);
+        setResults(await searchPlaces(q, near, i18n.language));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("search.searchError"));
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, showSaved, showRoundTrip, i18n.language, t]);
+
+  if (isNavigating || isPreviewing) return null;
 
   const toggleSaved = async () => {
     const next = !showSaved;
@@ -191,7 +220,7 @@ export function DestinationSearch() {
     setError(null);
     try {
       const near = await currentLatLng().catch(() => undefined);
-      setResults(await geocode(query.trim(), near));
+      setResults(await searchPlaces(query.trim(), near, i18n.language));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("search.searchError"));
     } finally {
@@ -199,12 +228,12 @@ export function DestinationSearch() {
     }
   };
 
-  const choose = async (r: GeocodeResult) => {
+  const choose = async (r: PlaceResult) => {
     setResults([]);
     setQuery(r.label);
     try {
       const from = await currentLatLng();
-      await navigateTo(from, { latitude: r.latitude, longitude: r.longitude, label: r.label });
+      await planTo(from, { latitude: r.latitude, longitude: r.longitude, label: r.title });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("search.navError"));
     }
@@ -329,7 +358,7 @@ export function DestinationSearch() {
               setError(null);
               try {
                 const from = await currentLatLng();
-                await navigateToRoundTrip(from, targetDistance, direction);
+                await planRoundTrip(from, targetDistance, direction);
                 setShowRoundTrip(false);
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Rundtour konnte nicht generiert werden.");
@@ -393,9 +422,14 @@ export function DestinationSearch() {
         <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
           {results.map((r, i) => (
             <Pressable key={`${r.label}-${i}`} style={styles.resultItem} onPress={() => choose(r)}>
-              <Text style={styles.resultText} numberOfLines={2}>
-                {r.label}
+              <Text style={styles.resultText} numberOfLines={1}>
+                {r.title}
               </Text>
+              {r.subtitle ? (
+                <Text style={styles.savedMeta} numberOfLines={1}>
+                  {r.subtitle}
+                </Text>
+              ) : null}
             </Pressable>
           ))}
         </ScrollView>

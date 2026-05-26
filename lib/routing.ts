@@ -75,7 +75,8 @@ interface OrsDirectionsResponse {
  */
 export async function getRoute(
   points: LatLng[],
-  preference: RoutePreference
+  preference: RoutePreference,
+  language?: string
 ): Promise<ComputedRoute> {
   if (points.length < 2) {
     throw new Error("A route needs at least a start and a destination.");
@@ -93,6 +94,8 @@ export async function getRoute(
       coordinates: points.map((p) => [p.longitude, p.latitude]),
       preference: pref,
       instructions: true,
+      // Turn-by-turn instructions localized to the rider's app language.
+      ...(language ? { language } : {}),
       radiuses: points.map(() => -1),
       ...(options ? { options } : {}),
     }),

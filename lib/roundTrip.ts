@@ -33,43 +33,56 @@ export function offsetCoordinate(start: LatLng, distanceMeters: number, bearingD
   };
 }
 
+function baseAngleFor(direction: "N" | "E" | "S" | "W" | "ANY"): number {
+  switch (direction) {
+    case "N":
+      return 0;
+    case "E":
+      return 90;
+    case "S":
+      return 180;
+    case "W":
+      return 270;
+    case "ANY":
+      return Math.random() * 360;
+  }
+}
+
 /**
- * Generates an ordered list of 5 coordinates forming a diamond loop optimized for motorcycle round-trips.
- * Start -> Point 1 (left flank) -> Point 2 (furthest peak) -> Point 3 (right flank) -> End (Start)
+ * Generates an ordered loop of waypoints for a motorcycle round-trip.
+ *
+ * To avoid an "out-and-back" route (riding a road and returning on the same
+ * one), the points are placed around a CIRCLE whose edge touches the start.
+ * Routing through them in angular order yields a convex circuit that departs
+ * and returns on different roads.
+ *
+ * Layout: the circle center sits one radius away in the chosen direction, so
+ * the start lies on the loop. We then walk evenly spaced points around the
+ * circle (skipping the one nearest the start) and close back to the start.
  */
 export function generateRoundTripWaypoints(
   start: LatLng,
   targetDistanceKm: number,
   direction: "N" | "E" | "S" | "W" | "ANY"
 ): LatLng[] {
-  // Road coefficient: real country-road routes are about 3.0x longer than direct straight line loops.
   const targetDistanceMeters = targetDistanceKm * 1000;
-  const radius = targetDistanceMeters / 3.0;
 
-  let baseAngle = 0;
-  switch (direction) {
-    case "N":
-      baseAngle = 0;
-      break;
-    case "E":
-      baseAngle = 90;
-      break;
-    case "S":
-      baseAngle = 180;
-      break;
-    case "W":
-      baseAngle = 270;
-      break;
-    case "ANY":
-      baseAngle = Math.random() * 360;
-      break;
+  // Road factor: real roads wander ~1.5x longer than the geometric loop.
+  const ROAD_FACTOR = 1.5;
+  // Loop ≈ circle circumference (2*pi*r). Solve for r from the target.
+  const radius = targetDistanceMeters / (2 * Math.PI * ROAD_FACTOR);
+
+  const baseAngle = baseAngleFor(direction);
+  const center = offsetCoordinate(start, radius, baseAngle);
+
+  // Points around the circle. k=0 sits back at the start, so we skip it and
+  // sweep the remaining ones to form the outbound→around→return circuit.
+  const N = 6;
+  const points: LatLng[] = [start];
+  for (let k = 1; k < N; k++) {
+    const angle = baseAngle + 180 + (360 / N) * k;
+    points.push(offsetCoordinate(center, radius, angle));
   }
-
-  // Generate three intermediate points to construct a magnificent loop
-  const p1 = offsetCoordinate(start, radius * 0.6, baseAngle - 40);
-  const p2 = offsetCoordinate(start, radius * 0.95, baseAngle);
-  const p3 = offsetCoordinate(start, radius * 0.6, baseAngle + 40);
-
-  // Return the complete circle loop
-  return [start, p1, p2, p3, start];
+  points.push(start);
+  return points;
 }

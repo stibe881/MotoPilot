@@ -91,6 +91,10 @@ export function RainRadarMap() {
   const route = useRideStore((s) => s.route);
   const destination = useRideStore((s) => s.destination);
   const isNavigating = useRideStore((s) => s.isNavigating);
+  const isPreviewing = useRideStore((s) => s.isPreviewing);
+  const isRoundTrip = useRideStore((s) => s.isRoundTrip);
+  const waypoints = useRideStore((s) => s.waypoints);
+  const updateWaypoint = useRideStore((s) => s.updateWaypoint);
   const liveRiders = useRideStore((s) => s.liveRiders);
   const trackedPath = useRideStore((s) => s.trackedPath);
   const showTrackedPath = useRideStore((s) => s.showTrackedPath);
@@ -228,8 +232,30 @@ export function RainRadarMap() {
           />
         ) : null}
 
-        {destination && 
-         typeof destination.latitude === "number" && !isNaN(destination.latitude) && 
+        {/* Editable waypoint pins during preview — drag to reshape the route. */}
+        {isPreviewing &&
+          waypoints.map((wp, i) => {
+            const isStart = i === 0;
+            const isDuplicateEnd = isRoundTrip && i === waypoints.length - 1;
+            if (isDuplicateEnd) return null;
+            if (typeof wp.latitude !== "number" || isNaN(wp.latitude)) return null;
+            return (
+              <Marker
+                key={`wp-${i}`}
+                identifier={`wp-${i}`}
+                coordinate={{ latitude: wp.latitude, longitude: wp.longitude }}
+                draggable={!isStart}
+                onDragEnd={(e) => updateWaypoint(i, e.nativeEvent.coordinate)}
+                pinColor={isStart ? colors.success : colors.accent}
+                title={isStart ? t("plan.startPin") : t("plan.stopPin", { n: i })}
+                zIndex={5}
+              />
+            );
+          })}
+
+        {/* Destination marker only while navigating (preview uses draggable pins). */}
+        {destination && !isPreviewing &&
+         typeof destination.latitude === "number" && !isNaN(destination.latitude) &&
          typeof destination.longitude === "number" && !isNaN(destination.longitude) ? (
           <Marker
             coordinate={destination}
